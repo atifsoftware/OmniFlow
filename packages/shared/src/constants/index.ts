@@ -7,7 +7,9 @@ export const API_ENDPOINTS = {
   },
   PRODUCTS: {
     LIST: '/products',
+    CATALOG_LIST: '/catalog/products',
     CATEGORIES: '/categories',
+    CATALOG_CATEGORIES: '/catalog/categories',
   },
   INVENTORY: {
     OVERVIEW: '/inventory/overview',
