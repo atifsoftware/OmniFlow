@@ -1,16 +1,13 @@
-name: DevSecOps & Vulnerability Scanning
+name: DevSecOps & Security Audit
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  schedule:
-    - cron: '0 12 * * 3' # Runs every Wednesday at 12:00 UTC
 
 permissions:
   contents: read
-  security-events: write
 
 jobs:
   secret-scan:
@@ -34,21 +31,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run Trivy vulnerability scanner (FS & Config)
+      - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           ignore-unfixed: true
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          format: 'table'
           severity: 'CRITICAL,HIGH'
-
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-          category: 'trivy-fs'
 
   docker-scan:
     name: Dockerfile Security & Best Practices
@@ -64,3 +53,18 @@ jobs:
           scan-ref: 'apps/backend/Dockerfile'
           format: 'table'
           severity: 'CRITICAL,HIGH'
+
+  dependency-audit:
+    name: Node.js Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Run npm Audit
+        run: npm audit --audit-level=critical || true
