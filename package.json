@@ -22,7 +22,8 @@
     "db:push": "npm --prefix apps/backend run prisma:push",
     "db:migrate": "npm --prefix apps/backend run prisma:migrate",
     "db:seed": "npm --prefix apps/backend run prisma:seed",
-    "db:studio": "npm --prefix apps/backend run prisma:studio"
+    "db:studio": "npm --prefix apps/backend run prisma:studio",
+    "test": "npm --prefix apps/backend run test"
   },
   "keywords": [
     "omniflow",

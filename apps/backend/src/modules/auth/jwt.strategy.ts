@@ -7,7 +7,12 @@ import { PrismaService } from '../../database/prisma.service';
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly prisma: PrismaService) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (req: any) => {
+          return req?.cookies ? req.cookies['omniflow_token'] : null;
+        },
+      ]),
       ignoreExpiration: false,
       secretOrKey: process.env.JWT_SECRET || 'omniflow-enterprise-ultra-secure-secret-key-2026',
     });

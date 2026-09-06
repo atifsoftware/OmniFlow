@@ -1,9 +1,9 @@
 import * as assert from "assert";
 import * as fs from "fs";
 import * as path from "path";
-import { OmniDbService } from "../database/omni-db.service";
+import { OmniDbService, OmniDbTransaction } from "../database/omni-db.service";
 
-type TestCallback = (assert: typeof import("assert")) => Promise<void>;
+type TestCallback = (assert: typeof import("assert"), tx: OmniDbTransaction) => Promise<void>;
 
 interface TestCase {
   name: string;
@@ -19,8 +19,8 @@ interface TestCase {
  *
  * Usage:
  *   const runner = new OmniTestRunner(db);
- *   runner.test("User can be created", async (assert) => {
- *     const id = await db.table("users").insert({ name: "Test" });
+ *   runner.test("User can be created", async (assert, tx) => {
+ *     const id = await tx.table("users").insert({ name: "Test" });
  *     assert.ok(id > 0, "Insert must return a positive ID");
  *   });
  *   const results = await runner.run();
@@ -96,7 +96,7 @@ export class OmniTestRunner {
         await tx.query("SET FOREIGN_KEY_CHECKS = 0");
 
         try {
-          await callback(assert);
+          await callback(assert, tx);
         } finally {
           await tx.query("SET FOREIGN_KEY_CHECKS = 1");
         }

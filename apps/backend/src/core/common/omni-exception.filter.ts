@@ -61,6 +61,10 @@ export class OmniExceptionFilter implements ExceptionFilter {
       this.logger.error(`[${req.method}] ${req.url} | ${status} | ${message}`, stack);
     }
 
+    const isDev =
+      process.env.NODE_ENV !== "production" &&
+      process.env.APP_ENV !== "production";
+
     // API / JSON response
     const isApi =
       (req.headers["accept"] || "").includes("application/json") ||
@@ -75,15 +79,15 @@ export class OmniExceptionFilter implements ExceptionFilter {
         code: errorName,
         trace_id: traceId,
         ...(Object.keys(extraErrors).length > 0 ? { errors: extraErrors } : {}),
-        ...(process.env.APP_ENV === "development" && stack
+        ...(isDev && stack
           ? { stack: stack.split("\n").slice(0, 6) }
           : {}),
       });
       return;
     }
 
-    // Development: HTML debug page
-    if (process.env.APP_ENV === "development" || process.env.NODE_ENV !== "production") {
+    // Development only: HTML debug page (never rendered in production)
+    if (isDev) {
       const { file, line } = this._parseStack(stack);
       const codeCtx = this._getCodeContext(file, line);
       const { causes, autoFix } = this._analyzeSuggestions(message, file);

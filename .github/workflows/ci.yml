@@ -1,0 +1,62 @@
+name: OmniFlow CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-ci:
+    name: Backend Lint, Build & Test
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mariadb:10.11
+        env:
+          MYSQL_ROOT_PASSWORD: rootpassword
+          MYSQL_DATABASE: omniflow_erp_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_password
+        ports:
+          - 3306:3306
+        options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval=10s --health-timeout=5s --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install Monorepo Root Dependencies
+        run: npm ci || npm install
+
+      - name: Build Shared Package
+        run: npm run build:shared
+
+      - name: Generate Prisma Client
+        run: npm --prefix apps/backend run prisma:generate
+        env:
+          DATABASE_URL: "mysql://test_user:test_password@localhost:3306/omniflow_erp_db"
+
+      - name: Build Backend
+        run: npm run build:backend
+
+      - name: Run Backend Tests
+        run: npm --prefix apps/backend test
+        env:
+          DATABASE_URL: "mysql://test_user:test_password@localhost:3306/omniflow_erp_db"
+          JWT_SECRET: "test-jwt-secret-key-at-least-32-characters"
+          REDIS_HOST: "localhost"
+          REDIS_PORT: "6379"

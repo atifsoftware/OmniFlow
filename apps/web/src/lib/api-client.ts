@@ -48,6 +48,7 @@ class OmniApiClient {
 
     try {
       const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+        credentials: 'include',
         ...options,
         headers,
       });
@@ -80,6 +81,36 @@ class OmniApiClient {
     return this.request<{ text: string }>('/ai/ask', {
       method: 'POST',
       body: JSON.stringify({ prompt }),
+    });
+  }
+
+  async login(email: string, password: string) {
+    const res = await this.request<{ user: any; token: string }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    if (res.success && res.data?.token) {
+      this.setToken(res.data.token);
+    }
+    return res;
+  }
+
+  async logout() {
+    this.token = null;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('omniflow_token');
+    }
+    return this.request('/auth/logout', { method: 'POST' });
+  }
+
+  async getInventory() {
+    return this.request<any[]>('/inventory/overview');
+  }
+
+  async createOrder(orderData: any) {
+    return this.request<any>('/orders', {
+      method: 'POST',
+      body: JSON.stringify(orderData),
     });
   }
 

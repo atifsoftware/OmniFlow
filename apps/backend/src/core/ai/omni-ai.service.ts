@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, ServiceUnavailableException, BadGatewayException } from "@nestjs/common";
 import * as https from "https";
 import { OmniCacheService } from "../cache/omni-cache.service";
 
@@ -60,7 +60,9 @@ export class OmniAiService {
     config: GeminiConfig = {},
     cacheSeconds?: number,
   ): Promise<string> {
-    if (!this.apiKey) return "Error: GEMINI_API_KEY is not configured.";
+    if (!this.apiKey) {
+      throw new ServiceUnavailableException("GEMINI_API_KEY is not configured. Please set GEMINI_API_KEY in environment.");
+    }
 
     // Cache support
     if (cacheSeconds) {
@@ -188,11 +190,16 @@ Make it engaging, SEO-friendly, and under 150 words.`;
         const result = await this._httpsPost(url, payload);
         return result;
       } catch (err) {
-        if (attempt === retries) throw err;
+        this.logger.warn(
+          `Gemini API request attempt ${attempt + 1}/${retries + 1} failed: ${(err as Error).message}`,
+        );
+        if (attempt === retries) {
+          throw new BadGatewayException(`AI service request failed: ${(err as Error).message}`);
+        }
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
       }
     }
-    return "Error: Unexpected AI service failure.";
+    throw new BadGatewayException("Unexpected AI service failure after retries.");
   }
 
   private _httpsPost(url: string, payload: Record<string, unknown>): Promise<string> {
@@ -210,11 +217,14 @@ Make it engaging, SEO-friendly, and under 150 words.`;
           try {
             const parsed = JSON.parse(data);
             if (res.statusCode !== 200) {
-              const errMsg = (parsed.error?.message as string) || `API Error ${res.statusCode}`;
-              return resolve(`Error: ${errMsg}`);
+              const errMsg = (parsed.error?.message as string) || `API Error (HTTP ${res.statusCode})`;
+              return reject(new Error(errMsg));
             }
             const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
-            resolve(text || "Error: Empty response from Gemini.");
+            if (!text) {
+              return reject(new Error("Empty response returned from Gemini API."));
+            }
+            resolve(text);
           } catch (e) {
             reject(new Error("Failed to parse Gemini response: " + (e as Error).message));
           }

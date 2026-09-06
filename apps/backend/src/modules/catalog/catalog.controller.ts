@@ -1,13 +1,14 @@
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CatalogService } from './catalog.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 import { PaginationQueryDto } from '../../core/common/pagination.dto';
 import { Public } from '../../core/decorators/public.decorator';
 import { Roles } from '../../core/decorators/roles.decorator';
 
 @ApiTags('Catalog & Products')
-@Controller('catalog')
+@Controller(['catalog', ''])
 export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
 
@@ -31,6 +32,22 @@ export class CatalogController {
   @ApiOperation({ summary: 'Create new product (Admin/Manager only)' })
   createProduct(@Body() dto: CreateProductDto) {
     return this.catalogService.createProduct(dto);
+  }
+
+  @Put('products/:id')
+  @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update existing product details (Admin/Manager only)' })
+  updateProduct(@Param('id') id: string, @Body() dto: UpdateProductDto) {
+    return this.catalogService.updateProduct(id, dto);
+  }
+
+  @Delete('products/:id')
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Deactivate / delete product (Admin only)' })
+  deleteProduct(@Param('id') id: string) {
+    return this.catalogService.deleteProduct(id);
   }
 
   @Public()

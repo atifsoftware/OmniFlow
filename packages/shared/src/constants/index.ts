@@ -9,9 +9,23 @@ export const API_ENDPOINTS = {
     LIST: '/products',
     CATEGORIES: '/categories',
   },
+  INVENTORY: {
+    OVERVIEW: '/inventory/overview',
+    WAREHOUSES: '/inventory/warehouses',
+    ADJUST: '/inventory/adjust',
+  },
   ORDERS: {
     LIST: '/orders',
     CREATE: '/orders',
+  },
+  AI: {
+    ASK: '/ai/ask',
+    DESCRIPTION: '/ai/description',
+    STATUS: '/ai/status',
+  },
+  STORAGE: {
+    UPLOAD: '/storage/upload',
+    UPLOAD_MULTIPLE: '/storage/upload-multiple',
   },
   HEALTH: '/health',
 } as const;

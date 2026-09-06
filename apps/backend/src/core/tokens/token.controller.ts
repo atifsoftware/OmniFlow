@@ -22,7 +22,7 @@ export class TokenController {
     @Req() req: Record<string, unknown>,
   ) {
     const user = req.user as Record<string, unknown>;
-    const userId = Number(user.id);
+    const userId = String(user.id);
     const result = await this.tokenService.createToken(
       userId,
       body.name,
@@ -50,7 +50,7 @@ export class TokenController {
   @ApiOperation({ summary: "List all API tokens" })
   async listTokens(@Req() req: Record<string, unknown>) {
     const user = req.user as Record<string, unknown>;
-    const tokens = await this.tokenService.getUserTokens(Number(user.id));
+    const tokens = await this.tokenService.getUserTokens(String(user.id));
 
     const masked = tokens.map((t) => ({
       id: t.id,
@@ -75,7 +75,7 @@ export class TokenController {
     @Req() req: Record<string, unknown>,
   ) {
     const user = req.user as Record<string, unknown>;
-    const success = await this.tokenService.revokeToken(Number(user.id), tokenId);
+    const success = await this.tokenService.revokeToken(String(user.id), tokenId);
     if (!success) return OmniResponse.notFound("Token");
     return OmniResponse.noContent("Token revoked successfully.");
   }
@@ -88,7 +88,7 @@ export class TokenController {
   @ApiOperation({ summary: "Revoke ALL API tokens (logout everywhere)" })
   async revokeAll(@Req() req: Record<string, unknown>) {
     const user = req.user as Record<string, unknown>;
-    const count = await this.tokenService.revokeAllTokens(Number(user.id));
+    const count = await this.tokenService.revokeAllTokens(String(user.id));
     return OmniResponse.noContent(`${count} token(s) revoked.`);
   }
 }

@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # MySQL / MariaDB Database
+  mysql:
+    image: mariadb:10.11
+    container_name: omniflow-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: omniflow_erp_db
+      MYSQL_USER: omniflow_user
+      MYSQL_PASSWORD: omniflow_secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./omniflow_erp_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - omniflow-network
+
+  # Redis In-Memory Cache & Message Broker
+  redis:
+    image: redis:7-alpine
+    container_name: omniflow-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - omniflow-network
+
+  # OmniFlow NestJS Core Backend
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: omniflow-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: mysql://omniflow_user:omniflow_secret@mysql:3306/omniflow_erp_db
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: omniflow_user
+      DB_PASS: omniflow_secret
+      DB_NAME: omniflow_erp_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: "omniflow-enterprise-ultra-secure-secret-key-production-docker"
+      JWT_EXPIRES_IN: "7d"
+      CORS_ORIGIN: "*"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - omniflow-network
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  omniflow-network:
+    driver: bridge

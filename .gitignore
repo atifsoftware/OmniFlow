@@ -30,6 +30,8 @@ web-build/
 # Storage uploads (keep folder structure)
 storage/uploads/*
 !storage/uploads/.gitkeep
+apps/backend/storage/uploads/*
+!apps/backend/storage/uploads/.gitkeep
 
 # Logs
 logs/

@@ -50,3 +50,31 @@ export interface IProductSummary {
   };
   isActive: boolean;
 }
+
+export interface IOrderItem {
+  id: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  unitPrice: number;
+  quantity: number;
+  subtotal: number;
+}
+
+export interface IOrderSummary {
+  id: string;
+  orderNumber: string;
+  userId?: string;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  shippingAddress?: string;
+  subtotal: number;
+  taxAmount: number;
+  totalAmount: number;
+  notes?: string;
+  createdAt: Date;
+  items?: IOrderItem[];
+}

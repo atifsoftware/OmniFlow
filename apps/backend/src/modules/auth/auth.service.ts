@@ -18,7 +18,7 @@ export class AuthService {
       throw new ConflictException('A user with this email already exists');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const hashedPassword = await bcrypt.hash(dto.password, 12);
     const user = await this.prisma.user.create({
       data: {
         name: dto.name,

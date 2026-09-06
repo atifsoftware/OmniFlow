@@ -14,6 +14,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { HealthModule } from './modules/health/health.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { HealthModule } from './modules/health/health.module';
     InventoryModule,
     OrdersModule,
     HealthModule,
+    UsersModule,
   ],
   providers: [
     {

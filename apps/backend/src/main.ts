@@ -3,6 +3,8 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as express from 'express';
 import * as path from 'path';
+import helmet from 'helmet';
+import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { OmniResponseInterceptor } from './core/common/omni-response.interceptor';
 import { OmniExceptionFilter } from './core/common/omni-exception.filter';
@@ -12,13 +14,44 @@ async function bootstrap() {
   const logger = new Logger('OmniFlowBootstrap');
   const app = await NestFactory.create(AppModule);
 
-  // 1. CORS
+  // Trust proxy for reverse proxies, load balancers, and Cloudflare
+  (app.getHttpAdapter().getInstance() as express.Application).set('trust proxy', 1);
+
+  // 1. Security Headers via Helmet
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+    }),
+  );
+
+  // 2. Cookie Parser
+  app.use(cookieParser());
+
+  // 3. Safe & Compliant CORS
+  const configuredOrigin = process.env.CORS_ORIGIN;
+  const isProd = process.env.NODE_ENV === 'production';
+  if (isProd && (!configuredOrigin || configuredOrigin === '*')) {
+    logger.warn('⚠️ WARNING: CORS_ORIGIN is set to wildcard or empty in production! Specify exact origins.');
+  }
+
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, CLI, Postman)
+      if (!origin) return callback(null, true);
+      if (!configuredOrigin || configuredOrigin === '*') {
+        return callback(null, origin);
+      }
+      const allowed = configuredOrigin.split(',').map((o) => o.trim());
+      if (allowed.includes(origin)) {
+        return callback(null, origin);
+      }
+      return callback(null, false);
+    },
     credentials: true,
   });
 
-  // 2. Static File Serving for Uploads
+  // 4. Static File Serving for Uploads
   const uploadsDir = path.join(process.cwd(), 'storage/uploads');
   app.use('/uploads', express.static(uploadsDir));
 
@@ -38,18 +71,23 @@ async function bootstrap() {
   app.useGlobalInterceptors(new OmniResponseInterceptor(contextService));
   app.useGlobalFilters(new OmniExceptionFilter(contextService));
 
-  // 5. Swagger API Documentation
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('OmniFlow ERP API')
-    .setDescription('Enterprise E-Commerce & ERP Core API Engine')
-    .setVersion('1.0.0')
-    .addBearerAuth()
-    .build();
+  // 5. Swagger API Documentation (Disabled in production unless explicitly enabled)
+  const isProduction = process.env.NODE_ENV === 'production';
+  const enableSwagger = process.env.ENABLE_SWAGGER === 'true' || !isProduction;
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document, {
-    customSiteTitle: 'OmniFlow API Documentation',
-  });
+  if (enableSwagger) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('OmniFlow ERP API')
+      .setDescription('Enterprise E-Commerce & ERP Core API Engine')
+      .setVersion('1.0.0')
+      .addBearerAuth()
+      .build();
+
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, document, {
+      customSiteTitle: 'OmniFlow API Documentation',
+    });
+  }
 
   const port = process.env.PORT || 4000;
   await app.listen(port);
@@ -57,7 +95,9 @@ async function bootstrap() {
   logger.log(`==================================================`);
   logger.log(`🚀 OmniFlow ERP Core Engine is running!`);
   logger.log(`🌐 API Base URL:  http://localhost:${port}/api/v1`);
-  logger.log(`📚 Swagger Docs:  http://localhost:${port}/api/docs`);
+  if (enableSwagger) {
+    logger.log(`📚 Swagger Docs:  http://localhost:${port}/api/docs`);
+  }
   logger.log(`📁 Static Files:  http://localhost:${port}/uploads`);
   logger.log(`==================================================`);
 }

@@ -6,4 +6,13 @@ export interface IThrottleOptions {
   ttlSeconds: number;
 }
 
-export const Throttle = (options: IThrottleOptions) => SetMetadata(THROTTLE_KEY, options);
+export const Throttle = (
+  limitOrOptions: number | IThrottleOptions,
+  ttlSeconds = 60,
+) => {
+  const options: IThrottleOptions =
+    typeof limitOrOptions === 'number'
+      ? { limit: limitOrOptions, ttlSeconds }
+      : limitOrOptions;
+  return SetMetadata(THROTTLE_KEY, options);
+};
