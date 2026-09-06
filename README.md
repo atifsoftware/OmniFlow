@@ -1,6 +1,9 @@
 # OmniFlow ⚡
 ### Enterprise Full-Stack Monorepo Framework
 
+[![CI Pipeline](https://github.com/atifsoftware/OmniFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/atifsoftware/OmniFlow/actions/workflows/ci.yml)
+[![CodeQL Security](https://github.com/atifsoftware/OmniFlow/actions/workflows/codeql.yml/badge.svg)](https://github.com/atifsoftware/OmniFlow/actions/workflows/codeql.yml)
+[![DevSecOps Scan](https://github.com/atifsoftware/OmniFlow/actions/workflows/security-scan.yml/badge.svg)](https://github.com/atifsoftware/OmniFlow/actions/workflows/security-scan.yml)
 [![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=flat-square&logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![React Native](https://img.shields.io/badge/React_Native-61DAFB?style=flat-square&logo=react&logoColor=black)](https://reactnative.dev/)
