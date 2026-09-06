@@ -1,0 +1,37 @@
+{
+  "name": "omniflow-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OmniFlow - Enterprise E-Commerce ERP Full-Stack Framework",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev:backend",
+    "dev:backend": "npm --prefix apps/backend run dev",
+    "dev:web": "npm --prefix apps/web run dev",
+    "dev:mobile": "npm --prefix apps/mobile run start",
+    "build": "npm run build:shared && npm run build:backend",
+    "build:shared": "npm --prefix packages/shared run build",
+    "build:backend": "npm --prefix apps/backend run build",
+    "build:web": "npm --prefix apps/web run build",
+    "start": "npm --prefix apps/backend run start",
+    "cli": "node cli/bin/omni.js",
+    "omni": "node cli/bin/omni.js",
+    "db:push": "npm --prefix apps/backend run prisma:push",
+    "db:migrate": "npm --prefix apps/backend run prisma:migrate",
+    "db:seed": "npm --prefix apps/backend run prisma:seed",
+    "db:studio": "npm --prefix apps/backend run prisma:studio"
+  },
+  "keywords": [
+    "omniflow",
+    "nestjs",
+    "erp",
+    "ecommerce",
+    "typescript",
+    "framework"
+  ],
+  "author": "OmniFlow Core Team",
+  "license": "MIT"
+}
