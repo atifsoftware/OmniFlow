@@ -30,6 +30,8 @@ model User {
   orders       Order[]
   stockLogs    StockMovement[]
 
+  @@index([role, isActive])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -45,6 +47,7 @@ model Category {
 
   products    Product[]
 
+  @@index([isActive])
   @@map("categories")
 }
 
@@ -68,6 +71,8 @@ model Product {
   orderItems    OrderItem[]
   stockMovements StockMovement[]
 
+  @@index([categoryId, isActive])
+  @@index([isActive, createdAt])
   @@map("products")
 }
 
@@ -120,6 +125,9 @@ model StockMovement {
   product       Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
   user          User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  @@index([productId, warehouseId])
+  @@index([createdAt])
+  @@index([referenceType, referenceId])
   @@map("stock_movements")
 }
 
@@ -144,6 +152,10 @@ model Order {
   user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   items           OrderItem[]
 
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([paymentStatus])
+  @@index([customerEmail])
   @@map("orders")
 }
 
@@ -160,5 +172,7 @@ model OrderItem {
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
+  @@index([orderId])
+  @@index([productId])
   @@map("order_items")
 }

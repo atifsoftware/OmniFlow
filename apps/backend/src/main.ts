@@ -5,6 +5,7 @@ import * as express from 'express';
 import * as path from 'path';
 import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
+import * as compression from 'compression';
 import { AppModule } from './app.module';
 import { OmniResponseInterceptor } from './core/common/omni-response.interceptor';
 import { OmniExceptionFilter } from './core/common/omni-exception.filter';
@@ -28,7 +29,14 @@ async function bootstrap() {
   // 2. Cookie Parser
   app.use(cookieParser());
 
-  // 3. Safe & Compliant CORS
+  // 3. HTTP Response Compression (Gzip / Brotli, 60-70% payload reduction)
+  app.use(
+    compression({
+      threshold: 1024, // Only compress responses larger than 1KB to optimize CPU usage
+    }),
+  );
+
+  // 4. Safe & Compliant CORS
   const configuredOrigin = process.env.CORS_ORIGIN;
   const isProd = process.env.NODE_ENV === 'production';
   if (isProd && (!configuredOrigin || configuredOrigin === '*')) {

@@ -85,12 +85,21 @@ npm run build
   npm run dev:mobile     # Runs on http://localhost:8081
   ```
 
-### 5. Interactive CLI
+### 5. Production Cluster Deployment
+Run the backend across all CPU cores using PM2 clustering with automatic failover and HTTP compression:
+```bash
+npm run build
+npm run start:cluster    # Spawns PM2 workers on all CPU cores
+npm run stop:cluster     # Gracefully stop cluster
+npm run restart:cluster  # Zero-downtime cluster reload
+```
+
+### 6. Interactive CLI
 ```bash
 npm run omni
 ```
 
-### 6. API Documentation
+### 7. API Documentation
 Swagger UI is automatically available at:
 `http://localhost:4000/api/docs`
 
