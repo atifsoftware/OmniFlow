@@ -1,6 +1,9 @@
+import 'class-validator';
+import 'class-transformer';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NestExpressApplication, ExpressAdapter } from '@nestjs/platform-express';
 import * as express from 'express';
 import * as path from 'path';
 import helmet from 'helmet';
@@ -13,10 +16,11 @@ import { OmniContextService } from './core/context/omni-context.service';
 
 async function bootstrap() {
   const logger = new Logger('OmniFlowBootstrap');
-  const app = await NestFactory.create(AppModule);
+  const server = express();
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, new ExpressAdapter(server));
 
   // Trust proxy for reverse proxies, load balancers, and Cloudflare
-  (app.getHttpAdapter().getInstance() as express.Application).set('trust proxy', 1);
+  app.set('trust proxy', 1);
 
   // 1. Security Headers via Helmet
   app.use(
