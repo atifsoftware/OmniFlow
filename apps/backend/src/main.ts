@@ -12,10 +12,32 @@ async function bootstrap() {
   const logger = new Logger('OmniFlowBootstrap');
   const app = await NestFactory.create(AppModule);
 
-  // 1. CORS
+  // 1. CORS with Dynamic Origin & Credentials Support
+  const configuredOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:8081')
+    .split(',')
+    .map((o) => o.trim());
+
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, Postman, server-to-server)
+      if (!origin) return callback(null, true);
+
+      // In non-production, allow localhost and emulator IPs
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        /^https?:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)(:\d+)?$/.test(origin)
+      ) {
+        return callback(null, true);
+      }
+
+      if (configuredOrigins.includes('*') || configuredOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(null, false);
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-trace-id'],
   });
 
   // 2. Static File Serving for Uploads

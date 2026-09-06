@@ -7,7 +7,7 @@ import { Public } from '../../core/decorators/public.decorator';
 import { Roles } from '../../core/decorators/roles.decorator';
 
 @ApiTags('Catalog & Products')
-@Controller('catalog')
+@Controller(['catalog', ''])
 export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
 

@@ -18,7 +18,7 @@ export class StorageController {
   constructor(private readonly storageService: OmniStorageService) {}
 
   @Post('upload')
-  @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER', 'STAFF')
+  @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER', 'WAREHOUSE_STAFF')
   @ApiOperation({ summary: 'Upload single file / image to OmniStorage' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -38,7 +38,7 @@ export class StorageController {
   }
 
   @Post('upload-multiple')
-  @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER', 'STAFF')
+  @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER', 'WAREHOUSE_STAFF')
   @ApiOperation({ summary: 'Upload multiple files (up to 5)' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({

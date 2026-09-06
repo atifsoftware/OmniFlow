@@ -44,3 +44,5 @@ yarn-debug.log*
 Thumbs.db
 
 *.code-workspace
+
+*.sql

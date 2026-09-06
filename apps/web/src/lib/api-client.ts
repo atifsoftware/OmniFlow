@@ -83,6 +83,17 @@ class OmniApiClient {
     });
   }
 
+  async getAiStatus() {
+    return this.request<{ engine: string; configured: boolean; model: string; status: string }>('/ai/status');
+  }
+
+  async generateProductDescription(name: string, category?: string, keywords?: string[]) {
+    return this.request<{ productName: string; generatedContent: string }>('/ai/description', {
+      method: 'POST',
+      body: JSON.stringify({ name, category, keywords }),
+    });
+  }
+
   async createToken(name: string, abilities = ['*']) {
     return this.request<{ token: string }>('/auth/tokens', {
       method: 'POST',

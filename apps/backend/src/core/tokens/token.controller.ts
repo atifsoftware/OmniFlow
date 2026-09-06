@@ -1,5 +1,5 @@
 import {
-  Controller, Post, Delete, Get, Param, Body, Req, ParseIntPipe, UseGuards,
+  Controller, Post, Delete, Get, Param, Body, Req, ParseIntPipe,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { OmniTokenService } from "./omni-token.service";
@@ -13,16 +13,16 @@ export class TokenController {
 
   /**
    * Create a new personal access token for the authenticated user
-   * POST /api/auth/tokens
+   * POST /api/v1/auth/tokens
    */
   @Post()
   @ApiOperation({ summary: "Create a new API token" })
   async createToken(
     @Body() body: { name: string; abilities?: string[]; expires_in_days?: number },
-    @Req() req: Record<string, unknown>,
+    @Req() req: Record<string, any>,
   ) {
-    const user = req.user as Record<string, unknown>;
-    const userId = Number(user.id);
+    const user = req.user;
+    const userId = String(user?.id || user?.sub);
     const result = await this.tokenService.createToken(
       userId,
       body.name,
@@ -44,13 +44,14 @@ export class TokenController {
 
   /**
    * List all tokens for the authenticated user
-   * GET /api/auth/tokens
+   * GET /api/v1/auth/tokens
    */
   @Get()
   @ApiOperation({ summary: "List all API tokens" })
-  async listTokens(@Req() req: Record<string, unknown>) {
-    const user = req.user as Record<string, unknown>;
-    const tokens = await this.tokenService.getUserTokens(Number(user.id));
+  async listTokens(@Req() req: Record<string, any>) {
+    const user = req.user;
+    const userId = String(user?.id || user?.sub);
+    const tokens = await this.tokenService.getUserTokens(userId);
 
     const masked = tokens.map((t) => ({
       id: t.id,
@@ -66,29 +67,31 @@ export class TokenController {
 
   /**
    * Revoke a token by ID
-   * DELETE /api/auth/tokens/:id
+   * DELETE /api/v1/auth/tokens/:id
    */
   @Delete(":id")
   @ApiOperation({ summary: "Revoke a specific API token" })
   async revokeToken(
     @Param("id", ParseIntPipe) tokenId: number,
-    @Req() req: Record<string, unknown>,
+    @Req() req: Record<string, any>,
   ) {
-    const user = req.user as Record<string, unknown>;
-    const success = await this.tokenService.revokeToken(Number(user.id), tokenId);
+    const user = req.user;
+    const userId = String(user?.id || user?.sub);
+    const success = await this.tokenService.revokeToken(userId, tokenId);
     if (!success) return OmniResponse.notFound("Token");
     return OmniResponse.noContent("Token revoked successfully.");
   }
 
   /**
    * Revoke all tokens for the authenticated user
-   * DELETE /api/auth/tokens
+   * DELETE /api/v1/auth/tokens
    */
   @Delete()
   @ApiOperation({ summary: "Revoke ALL API tokens (logout everywhere)" })
-  async revokeAll(@Req() req: Record<string, unknown>) {
-    const user = req.user as Record<string, unknown>;
-    const count = await this.tokenService.revokeAllTokens(Number(user.id));
+  async revokeAll(@Req() req: Record<string, any>) {
+    const user = req.user;
+    const userId = String(user?.id || user?.sub);
+    const count = await this.tokenService.revokeAllTokens(userId);
     return OmniResponse.noContent(`${count} token(s) revoked.`);
   }
 }

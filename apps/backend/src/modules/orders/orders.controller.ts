@@ -1,5 +1,5 @@
-import { Controller, Post, Get, Body, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Post, Get, Body, Param, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { CurrentUser } from '../../core/decorators/current-user.decorator';
@@ -22,8 +22,10 @@ export class OrdersController {
   @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List all orders (Admin)' })
-  getOrders() {
-    return this.ordersService.findAllOrders();
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  getOrders(@Query('page') page?: number, @Query('limit') limit?: number) {
+    return this.ordersService.findAllOrders({ page, limit });
   }
 
   @Get(':id')

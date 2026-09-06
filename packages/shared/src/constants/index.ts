@@ -7,11 +7,22 @@ export const API_ENDPOINTS = {
   },
   PRODUCTS: {
     LIST: '/products',
+    CATALOG_LIST: '/catalog/products',
     CATEGORIES: '/categories',
+    CATALOG_CATEGORIES: '/catalog/categories',
   },
   ORDERS: {
     LIST: '/orders',
     CREATE: '/orders',
+  },
+  AI: {
+    ASK: '/ai/ask',
+    DESCRIPTION: '/ai/description',
+    STATUS: '/ai/status',
+  },
+  STORAGE: {
+    UPLOAD: '/storage/upload',
+    UPLOAD_MULTIPLE: '/storage/upload-multiple',
   },
   HEALTH: '/health',
 } as const;

@@ -8,7 +8,7 @@ const TOKEN_PREFIX = "omni_pat_";
 export interface TokenRecord {
   id: number;
   tokenable_type: string;
-  tokenable_id: number;
+  tokenable_id: string;
   name: string;
   token: string;
   abilities: string;
@@ -26,16 +26,7 @@ export interface CreatedToken {
  * OmniFlow Personal Access Token Service
  * Laravel Sanctum-inspired API Key Authentication system.
  * Stores SHA-256 hashed tokens — plain tokens are never persisted.
- *
- * Usage:
- *   // Create
- *   const { plainTextToken } = await tokenService.createToken(user, "Mobile App", ["read:orders"]);
- *
- *   // Authenticate (in guard)
- *   const user = await tokenService.authenticateToken("omni_pat_xxxxx");
- *
- *   // Revoke
- *   await tokenService.revokeToken(userId, tokenId);
+ * Supports UUID user IDs (VARCHAR(36)).
  */
 @Injectable()
 export class OmniTokenService implements OnModuleInit {
@@ -48,22 +39,36 @@ export class OmniTokenService implements OnModuleInit {
   }
 
   private async _ensureTable(): Promise<void> {
-    await this.db.query(`
-      CREATE TABLE IF NOT EXISTS \`${TOKEN_TABLE}\` (
-        \`id\`             BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        \`tokenable_type\` VARCHAR(100) NOT NULL DEFAULT 'User',
-        \`tokenable_id\`   BIGINT UNSIGNED NOT NULL,
-        \`name\`           VARCHAR(255) NOT NULL,
-        \`token\`          VARCHAR(64) NOT NULL UNIQUE,
-        \`abilities\`      TEXT NOT NULL DEFAULT '["*"]',
-        \`last_used_at\`   TIMESTAMP NULL DEFAULT NULL,
-        \`expires_at\`     TIMESTAMP NULL DEFAULT NULL,
-        \`created_at\`     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_token (\`token\`),
-        INDEX idx_user (\`tokenable_id\`, \`tokenable_type\`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    this.logger.log("Personal Access Tokens table ready.");
+    try {
+      await this.db.query(`
+        CREATE TABLE IF NOT EXISTS \`${TOKEN_TABLE}\` (
+          \`id\`             BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          \`tokenable_type\` VARCHAR(100) NOT NULL DEFAULT 'User',
+          \`tokenable_id\`   VARCHAR(36) NOT NULL,
+          \`name\`           VARCHAR(255) NOT NULL,
+          \`token\`          VARCHAR(64) NOT NULL UNIQUE,
+          \`abilities\`      TEXT NOT NULL,
+          \`last_used_at\`   TIMESTAMP NULL DEFAULT NULL,
+          \`expires_at\`     TIMESTAMP NULL DEFAULT NULL,
+          \`created_at\`     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_token (\`token\`),
+          INDEX idx_user (\`tokenable_id\`, \`tokenable_type\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+
+      // Modify column if previously created with BIGINT
+      try {
+        await this.db.query(`
+          ALTER TABLE \`${TOKEN_TABLE}\` MODIFY COLUMN \`tokenable_id\` VARCHAR(36) NOT NULL
+        `);
+      } catch {
+        // Table already has correct column type or other non-fatal error
+      }
+
+      this.logger.log("Personal Access Tokens table ready (UUID support enabled).");
+    } catch (err: any) {
+      this.logger.error("Failed to initialize Personal Access Tokens table", err);
+    }
   }
 
   private _ts(date = new Date()): string {
@@ -75,14 +80,15 @@ export class OmniTokenService implements OnModuleInit {
   }
 
   /**
-   * Generate and store a new personal access token for a user
+   * Generate and store a new personal access token for a user (UUID string or number)
    */
   async createToken(
-    userId: number,
+    userId: string | number,
     name: string,
     abilities: string[] = ["*"],
     expiresInDays?: number,
   ): Promise<CreatedToken> {
+    const idStr = String(userId);
     const plainToken = TOKEN_PREFIX + crypto.randomBytes(30).toString("hex");
     const hashedToken = this._hashToken(plainToken);
 
@@ -92,7 +98,7 @@ export class OmniTokenService implements OnModuleInit {
 
     const insertId = await this.db.table(TOKEN_TABLE).insert({
       tokenable_type: "User",
-      tokenable_id: userId,
+      tokenable_id: idStr,
       name,
       token: hashedToken,
       abilities: JSON.stringify(abilities),
@@ -101,15 +107,15 @@ export class OmniTokenService implements OnModuleInit {
     });
 
     const record = await this.db.table(TOKEN_TABLE).where("id", insertId).first<TokenRecord>();
-    this.logger.log(`Token created for user #${userId}: "${name}"`);
+    this.logger.log(`Token created for user ${idStr}: "${name}"`);
 
     return { plainTextToken: plainToken, tokenRecord: record! };
   }
 
   /**
-   * Authenticate a plain-text token — returns the user record if valid
+   * Authenticate a plain-text token — returns user ID and abilities if valid
    */
-  async authenticateToken(plainToken: string): Promise<{ userId: number; abilities: string[]; tokenId: number }> {
+  async authenticateToken(plainToken: string): Promise<{ userId: string; abilities: string[]; tokenId: number }> {
     if (!plainToken.startsWith(TOKEN_PREFIX)) {
       throw new UnauthorizedException("Invalid token format.");
     }
@@ -138,7 +144,7 @@ export class OmniTokenService implements OnModuleInit {
       abilities = JSON.parse(record.abilities);
     } catch { /* keep default */ }
 
-    return { userId: record.tokenable_id, abilities, tokenId: record.id };
+    return { userId: String(record.tokenable_id), abilities, tokenId: record.id };
   }
 
   /**
@@ -151,9 +157,9 @@ export class OmniTokenService implements OnModuleInit {
   /**
    * Get all tokens for a user
    */
-  async getUserTokens(userId: number): Promise<TokenRecord[]> {
+  async getUserTokens(userId: string | number): Promise<TokenRecord[]> {
     return this.db.table(TOKEN_TABLE)
-      .where("tokenable_id", userId)
+      .where("tokenable_id", String(userId))
       .orderByDesc("created_at")
       .get<TokenRecord>();
   }
@@ -161,10 +167,10 @@ export class OmniTokenService implements OnModuleInit {
   /**
    * Revoke a token by ID (must belong to the user)
    */
-  async revokeToken(userId: number, tokenId: number): Promise<boolean> {
+  async revokeToken(userId: string | number, tokenId: number): Promise<boolean> {
     const affected = await this.db.table(TOKEN_TABLE)
       .where("id", tokenId)
-      .where("tokenable_id", userId)
+      .where("tokenable_id", String(userId))
       .delete();
     return affected > 0;
   }
@@ -172,8 +178,8 @@ export class OmniTokenService implements OnModuleInit {
   /**
    * Revoke ALL tokens for a user (e.g. on password change)
    */
-  async revokeAllTokens(userId: number): Promise<number> {
-    return this.db.table(TOKEN_TABLE).where("tokenable_id", userId).delete();
+  async revokeAllTokens(userId: string | number): Promise<number> {
+    return this.db.table(TOKEN_TABLE).where("tokenable_id", String(userId)).delete();
   }
 
   /**
@@ -186,7 +192,7 @@ export class OmniTokenService implements OnModuleInit {
   /**
    * Get token stats for a user
    */
-  async tokenStats(userId: number): Promise<Record<string, unknown>> {
+  async tokenStats(userId: string | number): Promise<Record<string, unknown>> {
     const tokens = await this.getUserTokens(userId);
     const now = new Date();
     return {
