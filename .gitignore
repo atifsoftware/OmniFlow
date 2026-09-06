@@ -42,3 +42,5 @@ yarn-debug.log*
 .idea/
 .vscode/
 Thumbs.db
+
+*.code-workspace

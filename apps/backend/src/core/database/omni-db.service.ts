@@ -18,12 +18,46 @@ export class OmniDbService implements OnModuleInit {
   private pool!: Pool;
 
   async onModuleInit() {
+    let host = process.env.DB_HOST || "localhost";
+    let port = parseInt(process.env.DB_PORT || "3306");
+    let user = process.env.DB_USER || "root";
+    let password = process.env.DB_PASS || "";
+    let database = process.env.DB_NAME || "";
+
+    if (process.env.DATABASE_URL) {
+      try {
+        const parsed = new URL(process.env.DATABASE_URL);
+        host = process.env.DB_HOST || parsed.hostname || host;
+        port = parseInt(process.env.DB_PORT || parsed.port || String(port));
+        user = process.env.DB_USER || decodeURIComponent(parsed.username) || user;
+        password = process.env.DB_PASS !== undefined ? process.env.DB_PASS : decodeURIComponent(parsed.password || "");
+        if (!database && parsed.pathname) {
+          database = parsed.pathname.replace(/^\//, "");
+        }
+      } catch {
+        // keep fallback
+      }
+    }
+
+    if (!database) {
+      database = "omniflow_erp_db";
+    }
+
+    // Auto-create database if not existing
+    try {
+      const adminConn = await mysql.createConnection({ host, port, user, password });
+      await adminConn.query(`CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
+      await adminConn.end();
+    } catch (e: any) {
+      this.logger.warn(`Could not auto-verify database existence: ${e.message}`);
+    }
+
     this.pool = mysql.createPool({
-      host: process.env.DB_HOST || "localhost",
-      port: parseInt(process.env.DB_PORT || "3306"),
-      user: process.env.DB_USER || "root",
-      password: process.env.DB_PASS || "",
-      database: process.env.DB_NAME || "omniflow_db",
+      host,
+      port,
+      user,
+      password,
+      database,
       waitForConnections: true,
       connectionLimit: parseInt(process.env.DB_POOL_SIZE || "10"),
       queueLimit: 0,
@@ -36,9 +70,9 @@ export class OmniDbService implements OnModuleInit {
 
     try {
       await this.pool.query("SELECT 1 AS ok");
-      this.logger.log("OmniDB connected to MySQL successfully.");
+      this.logger.log(`OmniDB connected to MySQL database [${database}] successfully.`);
     } catch (err) {
-      this.logger.error("OmniDB failed to connect to MySQL!", err);
+      this.logger.error(`OmniDB failed to connect to MySQL database [${database}]!`, err);
       throw err;
     }
   }
