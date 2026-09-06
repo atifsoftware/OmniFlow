@@ -1,8 +1,15 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export function Navbar() {
+  const pathname = usePathname();
+
+  if (pathname.startsWith('/admin') || pathname === '/login') {
+    return null;
+  }
+
   return (
     <header style={{
       borderBottom: '1px solid var(--border-subtle)',

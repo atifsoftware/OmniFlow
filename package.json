@@ -29,6 +29,14 @@
     "db:studio": "npm --prefix apps/backend run prisma:studio",
     "test": "npm --prefix apps/backend run test"
   },
+  "overrides": {
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
   "keywords": [
     "omniflow",
     "nestjs",

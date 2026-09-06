@@ -1,4 +1,14 @@
+'use client';
+
+import { usePathname } from 'next/navigation';
+
 export function Footer() {
+  const pathname = usePathname();
+
+  if (pathname.startsWith('/admin') || pathname === '/login') {
+    return null;
+  }
+
   return (
     <footer style={{
       borderTop: '1px solid var(--border-subtle)',
