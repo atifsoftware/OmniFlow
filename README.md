@@ -37,7 +37,7 @@ OmniFlow Monorepo
 | **Backend** | NestJS + TypeScript | Enterprise REST API, Business Logic, OmniDB, Queues, PDF Engine |
 | **Web & Admin** | Next.js (App Router) + React | SEO-friendly Storefront + Interactive ERP Portal |
 | **Mobile** | React Native + Expo | Cross-platform iOS & Android mobile application |
-| **Database** | MySQL + Prisma / OmniDB | Relational ACID storage, migrations, and active records |
+| **Database** | MySQL & PostgreSQL (Dual-Dialect OmniDB) | Zero-code-change switching, auto-dialect detection, connection pooling, active records, auto deadlock retry |
 | **Shared** | `@omniflow/shared` | Common types, DTOs, NumberToWords, Money, validation contracts |
 | **AI Engine** | Google Gemini (Native HTTPS) | AI Assistant, business analytics, and automation |
 
@@ -86,6 +86,49 @@ OmniFlow now incorporates enterprise-grade, battle-tested ERP core engines:
 - **Interactive CLI 3.0 (`npm run omni`)**: 26 commands for database backup/restore, queue, cache, AI, and full-stack servers.
 
 ---
+
+
+---
+
+## 🗄️ Native Dual-Database Support: MySQL & PostgreSQL
+
+OmniFlow features an enterprise-grade **Dual-Dialect Database Engine** (`OmniDbService`, `QueryBuilder`, `BackupService`). Developers write application queries and models once, and OmniFlow translates queries, parameter placeholders, quotes, and locking mechanisms on the fly without any code changes.
+
+### Switching Databases via `.env`
+
+#### Option A: MySQL
+```env
+DB_TYPE=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=root
+DB_PASS=secret
+DB_NAME=omniflow_db
+```
+
+#### Option B: PostgreSQL
+```env
+DB_TYPE=postgresql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_USER=postgres
+DB_PASS=secret
+DB_NAME=omniflow_db
+# Or full connection URL:
+# DATABASE_URL=postgres://postgres:secret@localhost:5432/omniflow_db
+```
+
+### Dual-Database Capabilities
+
+| Feature | MySQL | PostgreSQL |
+|:---|:---|:---|
+| **Identifier Quoting** | Backticks (``` `table`.`col` ```) | Standard ANSI double quotes (``` "table"."col" ```) |
+| **Placeholders** | Positional `?` | Dollar indexed (`$1, $2, $3`) |
+| **Insert Return ID** | `result.insertId` | Appends `RETURNING id` -> `rows[0].id` |
+| **Shared Row Lock** | `LOCK IN SHARE MODE` | `FOR SHARE` |
+| **Exclusive Row Lock** | `FOR UPDATE` | `FOR UPDATE` |
+| **Auto Deadlock Retry** | Error codes `1213` & `1205` | Error codes `40P01` & `55P03` (Exponential backoff) |
+| **Zero-Config Backup** | Dumps `mysqldump` / SQL DDL + rows | Dumps `pg_dump` / PostgreSQL SQL DDL + rows |
 
 ## 🧪 Running Tests
 

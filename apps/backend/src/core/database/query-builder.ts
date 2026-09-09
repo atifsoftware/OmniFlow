@@ -2,19 +2,21 @@ import { Pool, PoolConnection } from "mysql2/promise";
 
 /**
  * OmniFlow Fluent Query Builder
- * Inspired by NodeFlow-React QueryBuilder pattern.
- * Supports all standard SQL operations with a clean chainable API.
+ * Supports both MySQL and PostgreSQL natively with automatic dialect detection,
+ * identifier quoting, parameter placeholder conversion ($1 vs ?), and locking clauses.
  */
 
-interface WhereClause {
+export interface WhereClause {
   boolean: "AND" | "OR";
   sql: string;
   bindings: unknown[];
 }
 
+export type DbDialect = "mysql" | "postgresql";
+
 export class QueryBuilder {
   private _table: string;
-  private _connection: PoolConnection | Pool | null;
+  private _connection: any = null;
   private _select = "*";
   private _wheres: WhereClause[] = [];
   private _joins: string[] = [];
@@ -25,12 +27,23 @@ export class QueryBuilder {
   private _having: string | null = null;
   private _havingBindings: unknown[] = [];
   private _lock: string | null = null;
-  private _pool: Pool;
+  private _pool: any;
+  private _dbType: DbDialect = "mysql";
 
-  constructor(table: string, pool: Pool, connection: PoolConnection | Pool | null = null) {
+  constructor(table: string, pool: any, connection: any = null, dbType: DbDialect = "mysql") {
     this._table = table;
     this._pool = pool;
     this._connection = connection;
+    this._dbType = dbType;
+  }
+
+  setDbType(type: DbDialect): this {
+    this._dbType = type;
+    return this;
+  }
+
+  getDbType(): DbDialect {
+    return this._dbType;
   }
 
   select(...fields: string[]): this {
@@ -47,175 +60,202 @@ export class QueryBuilder {
     return this;
   }
 
+  private _escapeIdentifier(name: string): string {
+    if (name.includes(".")) {
+      return name.split(".").map((part) => this._escapeIdentifier(part)).join(".");
+    }
+    if (this._dbType === "postgresql") {
+      return '"' + name + '"';
+    }
+    return "`" + name + "`";
+  }
+
   private _escapeCol(column: string): string {
     if (column.includes("(") || column.includes(" ") || column === "*") return column;
-    return column.split(".").map((c) => "`" + c + "`").join(".");
+    return this._escapeIdentifier(column);
   }
 
-  private _addWhere(boolean: "AND" | "OR", sql: string, bindings: unknown[] = []): this {
-    this._wheres.push({ boolean, sql, bindings });
+  private _parseTableName(table: string): string {
+    const lower = table.toLowerCase();
+    if (lower.includes(" as ")) {
+      const parts = table.split(/ as /i);
+      return this._escapeIdentifier(parts[0].trim()) + " AS " + this._escapeIdentifier(parts[1].trim());
+    }
+    return this._escapeIdentifier(table);
+  }
+
+  formatPlaceholders(sql: string): string {
+    if (this._dbType === "postgresql") {
+      let idx = 0;
+      return sql.replace(/\?/g, () => `$${++idx}`);
+    }
+    return sql;
+  }
+
+  where(column: string, operator?: unknown, value?: unknown): this {
+    if (arguments.length === 2) {
+      value = operator;
+      operator = "=";
+    }
+    const col = this._escapeCol(column);
+    this._wheres.push({
+      boolean: "AND",
+      sql: `${col} ${operator} ?`,
+      bindings: [value],
+    });
     return this;
   }
 
-  where(column: string | ((qb: QueryBuilder) => void), operator?: unknown, value?: unknown): this {
-    if (typeof column === "function") {
-      const nested = new QueryBuilder(this._table, this._pool, this._connection);
-      column(nested);
-      if (nested._wheres.length > 0) {
-        const { sql, bindings } = nested._compileWheres();
-        this._addWhere("AND", "(" + sql + ")", bindings);
-      }
-      return this;
+  orWhere(column: string, operator?: unknown, value?: unknown): this {
+    if (arguments.length === 2) {
+      value = operator;
+      operator = "=";
     }
-    if (value === undefined) { value = operator; operator = "="; }
-    this._addWhere("AND", this._escapeCol(column) + " " + operator + " ?", [value]);
-    return this;
-  }
-
-  orWhere(column: string | ((qb: QueryBuilder) => void), operator?: unknown, value?: unknown): this {
-    if (typeof column === "function") {
-      const nested = new QueryBuilder(this._table, this._pool, this._connection);
-      column(nested);
-      if (nested._wheres.length > 0) {
-        const { sql, bindings } = nested._compileWheres();
-        this._addWhere("OR", "(" + sql + ")", bindings);
-      }
-      return this;
-    }
-    if (value === undefined) { value = operator; operator = "="; }
-    this._addWhere("OR", this._escapeCol(column) + " " + operator + " ?", [value]);
+    const col = this._escapeCol(column);
+    this._wheres.push({
+      boolean: "OR",
+      sql: `${col} ${operator} ?`,
+      bindings: [value],
+    });
     return this;
   }
 
   whereIn(column: string, values: unknown[]): this {
-    if (!Array.isArray(values) || values.length === 0) return this;
+    if (values.length === 0) {
+      this._wheres.push({ boolean: "AND", sql: "1 = 0", bindings: [] });
+      return this;
+    }
+    const col = this._escapeCol(column);
     const placeholders = values.map(() => "?").join(", ");
-    this._addWhere("AND", this._escapeCol(column) + " IN (" + placeholders + ")", values);
+    this._wheres.push({
+      boolean: "AND",
+      sql: `${col} IN (${placeholders})`,
+      bindings: values,
+    });
     return this;
   }
 
   whereNotIn(column: string, values: unknown[]): this {
-    if (!Array.isArray(values) || values.length === 0) return this;
+    if (values.length === 0) return this;
+    const col = this._escapeCol(column);
     const placeholders = values.map(() => "?").join(", ");
-    this._addWhere("AND", this._escapeCol(column) + " NOT IN (" + placeholders + ")", values);
+    this._wheres.push({
+      boolean: "AND",
+      sql: `${col} NOT IN (${placeholders})`,
+      bindings: values,
+    });
     return this;
   }
 
   whereNull(column: string): this {
-    this._addWhere("AND", this._escapeCol(column) + " IS NULL");
+    const col = this._escapeCol(column);
+    this._wheres.push({ boolean: "AND", sql: `${col} IS NULL`, bindings: [] });
     return this;
   }
 
   whereNotNull(column: string): this {
-    this._addWhere("AND", this._escapeCol(column) + " IS NOT NULL");
+    const col = this._escapeCol(column);
+    this._wheres.push({ boolean: "AND", sql: `${col} IS NOT NULL`, bindings: [] });
     return this;
   }
 
   whereBetween(column: string, range: [unknown, unknown]): this {
-    this._addWhere("AND", this._escapeCol(column) + " BETWEEN ? AND ?", range);
-    return this;
-  }
-
-  whereNotBetween(column: string, range: [unknown, unknown]): this {
-    this._addWhere("AND", this._escapeCol(column) + " NOT BETWEEN ? AND ?", range);
+    const col = this._escapeCol(column);
+    this._wheres.push({
+      boolean: "AND",
+      sql: `${col} BETWEEN ? AND ?`,
+      bindings: [range[0], range[1]],
+    });
     return this;
   }
 
   whereLike(column: string, value: string): this {
-    return this.where(column, "LIKE", value);
-  }
-
-  orWhereLike(column: string, value: string): this {
-    return this.orWhere(column, "LIKE", value);
+    const col = this._escapeCol(column);
+    const op = this._dbType === "postgresql" ? "ILIKE" : "LIKE";
+    this._wheres.push({
+      boolean: "AND",
+      sql: `${col} ${op} ?`,
+      bindings: [value],
+    });
+    return this;
   }
 
   whereRaw(sql: string, bindings: unknown[] = []): this {
-    this._addWhere("AND", sql, bindings);
+    this._wheres.push({ boolean: "AND", sql, bindings });
     return this;
   }
 
   orWhereRaw(sql: string, bindings: unknown[] = []): this {
-    this._addWhere("OR", sql, bindings);
+    this._wheres.push({ boolean: "OR", sql, bindings });
     return this;
   }
 
-  when(condition: unknown, callback: (qb: this) => void, defaultCallback?: (qb: this) => void): this {
-    if (condition) { callback(this); } else if (defaultCallback) { defaultCallback(this); }
-    return this;
-  }
-
-  join(table: string, first: string, operator?: string, second?: string, type = "INNER"): this {
+  join(table: string, first: string, operator: string, second: string, type = "INNER"): this {
     const escTable = this._parseTableName(table);
-    if (operator === undefined && second === undefined) {
-      this._joins.push(type + " JOIN " + escTable + " ON " + first);
-    } else {
-      this._joins.push(type + " JOIN " + escTable + " ON " + this._escapeCol(first) + " " + operator + " " + this._escapeCol(second!));
-    }
+    const escFirst = this._escapeCol(first);
+    const escSecond = this._escapeCol(second);
+    this._joins.push(`${type} JOIN ${escTable} ON ${escFirst} ${operator} ${escSecond}`);
     return this;
   }
 
-  leftJoin(table: string, first: string, operator?: string, second?: string): this {
+  leftJoin(table: string, first: string, operator: string, second: string): this {
     return this.join(table, first, operator, second, "LEFT");
   }
 
-  rightJoin(table: string, first: string, operator?: string, second?: string): this {
+  rightJoin(table: string, first: string, operator: string, second: string): this {
     return this.join(table, first, operator, second, "RIGHT");
   }
 
-  groupBy(column: string): this {
-    this._groupBy = "GROUP BY " + this._escapeCol(column);
+  orderBy(column: string, direction: "ASC" | "DESC" = "ASC"): this {
+    this._orders.push(`${this._escapeCol(column)} ${direction.toUpperCase()}`);
+    return this;
+  }
+
+  orderByDesc(column: string): this {
+    return this.orderBy(column, "DESC");
+  }
+
+  latest(column = "created_at"): this {
+    return this.orderBy(column, "DESC");
+  }
+
+  oldest(column = "created_at"): this {
+    return this.orderBy(column, "ASC");
+  }
+
+  groupBy(...columns: string[]): this {
+    this._groupBy = "GROUP BY " + columns.map((c) => this._escapeCol(c)).join(", ");
     return this;
   }
 
   having(column: string, operator: string, value: unknown): this {
-    this._having = "HAVING " + this._escapeCol(column) + " " + operator + " ?";
-    this._havingBindings = [value];
+    this._having = `HAVING ${this._escapeCol(column)} ${operator} ?`;
+    this._havingBindings.push(value);
     return this;
   }
 
-  havingRaw(sql: string, bindings: unknown[] = []): this {
-    this._having = "HAVING " + sql;
-    this._havingBindings = bindings;
+  limit(count: number): this {
+    this._limit = count;
     return this;
   }
 
-  orderBy(column: string, direction: "ASC" | "DESC" = "ASC"): this {
-    this._orders.push(this._escapeCol(column) + " " + direction.toUpperCase());
+  offset(count: number): this {
+    this._offset = count;
     return this;
   }
 
-  orderByDesc(column: string): this { return this.orderBy(column, "DESC"); }
-
-  orderByRaw(sql: string): this { this._orders.push(sql); return this; }
-
-  latest(column = "created_at"): this { return this.orderBy(column, "DESC"); }
-
-  oldest(column = "created_at"): this { return this.orderBy(column, "ASC"); }
-
-  limit(count: number): this { this._limit = parseInt(String(count)); return this; }
-
-  offset(count: number): this { this._offset = parseInt(String(count)); return this; }
-
-  take(count: number): this { return this.limit(count); }
-
-  skip(count: number): this { return this.offset(count); }
-
-  forPage(page: number, perPage = 20): this {
+  forPage(page: number, perPage = 15): this {
     return this.offset((page - 1) * perPage).limit(perPage);
   }
 
-  private _parseTableName(table: string): string {
-    let tableName = table;
-    let alias = "";
-    if (tableName.toLowerCase().includes(" as ")) {
-      const parts = tableName.split(/ as /i);
-      tableName = parts[0].trim();
-      alias = " AS `" + parts[1].trim() + "`";
-    }
-    const escTable = tableName.includes(".")
-      ? tableName.split(".").map((t) => "`" + t + "`").join(".")
-      : "`" + tableName + "`";
-    return escTable + alias;
+  forUpdate(): this {
+    this._lock = "FOR UPDATE";
+    return this;
+  }
+
+  sharedLock(): this {
+    this._lock = this._dbType === "postgresql" ? "FOR SHARE" : "LOCK IN SHARE MODE";
+    return this;
   }
 
   private _compileWheres(): { sql: string; bindings: unknown[] } {
@@ -227,17 +267,6 @@ export class QueryBuilder {
       bindings.push(...w.bindings);
     });
     return { sql, bindings };
-  }
-
-
-  forUpdate(): this {
-    this._lock = "FOR UPDATE";
-    return this;
-  }
-
-  sharedLock(): this {
-    this._lock = "LOCK IN SHARE MODE";
-    return this;
   }
 
   toSql(): string {
@@ -259,6 +288,28 @@ export class QueryBuilder {
     return sql;
   }
 
+  toSqlWithBindings(): { sql: string; bindings: unknown[] } {
+    const rawSql = this.toSql();
+    const bindings = this.getBindings();
+    return {
+      sql: this._dbType === "postgresql" ? this.formatPlaceholders(rawSql) : rawSql,
+      bindings,
+    };
+  }
+
+  toRawSql(): string {
+    const sql = this.toSql();
+    const bindings = this.getBindings();
+    let idx = 0;
+    return sql.replace(/\?/g, () => {
+      const val = bindings[idx++];
+      if (val === null || val === undefined) return "NULL";
+      if (typeof val === "number") return String(val);
+      if (typeof val === "boolean") return val ? "1" : "0";
+      return "'" + String(val).replace(/'/g, "''") + "'";
+    });
+  }
+
   getBindings(): unknown[] {
     const { bindings } = this._compileWheres();
     return [...bindings, ...this._havingBindings];
@@ -266,8 +317,14 @@ export class QueryBuilder {
 
   private async _execute(sql: string, bindings: unknown[] = []): Promise<unknown[]> {
     const executor = this._connection || this._pool;
-    const [rows] = await (executor as Pool).query(sql, bindings);
-    return rows as unknown[];
+    if (this._dbType === "postgresql") {
+      const formattedSql = this.formatPlaceholders(sql);
+      const res = await (executor as any).query(formattedSql, bindings);
+      return res.rows as unknown[];
+    } else {
+      const [rows] = await (executor as Pool).query(sql, bindings);
+      return rows as unknown[];
+    }
   }
 
   async get<T = Record<string, unknown>>(): Promise<T[]> {
@@ -280,109 +337,163 @@ export class QueryBuilder {
     return rows.length > 0 ? rows[0] : null;
   }
 
-  async firstOrFail<T = Record<string, unknown>>(): Promise<T> {
-    const result = await this.first<T>();
-    if (!result) throw new Error("No record found in table: " + this._table);
-    return result;
+  async find<T = Record<string, unknown>>(id: unknown, primaryKey = "id"): Promise<T | null> {
+    return this.where(primaryKey, id).first<T>();
   }
 
-  async pluck<T = unknown>(column: string): Promise<T[]> {
+  async value<T = unknown>(column: string): Promise<T | null> {
     this.select(column);
-    const rows = await this.get<Record<string, unknown>>();
+    const row = (await this.first()) as Record<string, unknown> | null;
+    return row ? (row[column] as T) : null;
+  }
+
+  async pluck<T = unknown>(column: string): Promise<T[]>;
+  async pluck<T = unknown>(column: string, key: string): Promise<Record<string, T>>;
+  async pluck<T = unknown>(column: string, key?: string): Promise<T[] | Record<string, T>> {
+    this.select(key ? `${column}, ${key}` : column);
+    const rows = (await this.get()) as Record<string, unknown>[];
+    if (key) {
+      const map: Record<string, T> = {};
+      rows.forEach((r) => { map[String(r[key])] = r[column] as T; });
+      return map;
+    }
     return rows.map((r) => r[column] as T);
+  }
+
+  async paginate<T = Record<string, unknown>>(
+    page = 1,
+    perPage = 15
+  ): Promise<{ data: T[]; total: number; page: number; perPage: number; lastPage: number }> {
+    const total = await this.count();
+    const data = await this.forPage(page, perPage).get<T>();
+    return {
+      data,
+      total,
+      page,
+      perPage,
+      lastPage: Math.ceil(total / perPage),
+    };
   }
 
   async insert(data: Record<string, unknown>): Promise<number> {
     const keys = Object.keys(data);
-    const escapedKeys = keys.map((k) => "`" + k + "`").join(", ");
-    const placeholders = keys.map(() => "?").join(", ");
-    const sql = "INSERT INTO `" + this._table + "` (" + escapedKeys + ") VALUES (" + placeholders + ")";
-    const executor = this._connection || this._pool;
-    const [result] = await (executor as Pool).query(sql, Object.values(data));
-    return (result as { insertId: number }).insertId;
-  }
+    const isPg = this._dbType === "postgresql";
+    const escTable = this._parseTableName(this._table);
+    const escCols = keys.map((k) => this._escapeIdentifier(k)).join(", ");
+    const placeholders = keys.map((_, i) => isPg ? `$${i + 1}` : "?").join(", ");
+    const values = Object.values(data);
 
-  async insertMany(rows: Record<string, unknown>[]): Promise<number> {
-    if (rows.length === 0) return 0;
-    const keys = Object.keys(rows[0]);
-    const escapedKeys = keys.map((k) => "`" + k + "`").join(", ");
-    const rowPlaceholder = "(" + keys.map(() => "?").join(", ") + ")";
-    const allPlaceholders = rows.map(() => rowPlaceholder).join(", ");
-    const values = rows.flatMap((r) => Object.values(r));
-    const sql = "INSERT INTO `" + this._table + "` (" + escapedKeys + ") VALUES " + allPlaceholders;
+    let sql = `INSERT INTO ${escTable} (${escCols}) VALUES (${placeholders})`;
+    if (isPg) {
+      sql += " RETURNING id";
+    }
+
     const executor = this._connection || this._pool;
-    const [result] = await (executor as Pool).query(sql, values);
-    return (result as { affectedRows: number }).affectedRows;
+    if (isPg) {
+      const res = await (executor as any).query(sql, values);
+      return res.rows[0]?.id;
+    } else {
+      const [result] = await (executor as Pool).query(sql, values);
+      return (result as { insertId: number }).insertId;
+    }
   }
 
   async update(data: Record<string, unknown>): Promise<number> {
     const keys = Object.keys(data);
-    const setClause = keys.map((k) => "`" + k + "` = ?").join(", ");
-    let sql = "UPDATE `" + this._table + "` SET " + setClause;
+    const isPg = this._dbType === "postgresql";
+    const escTable = this._parseTableName(this._table);
+    const assignments = keys.map((k) => `${this._escapeIdentifier(k)} = ?`).join(", ");
+    let sql = `UPDATE ${escTable} SET ${assignments}`;
     const { sql: whereSql, bindings: whereBindings } = this._compileWheres();
     if (whereSql) sql += " WHERE " + whereSql;
-    const executor = this._connection || this._pool;
-    const [result] = await (executor as Pool).query(sql, [...Object.values(data), ...whereBindings]);
-    return (result as { affectedRows: number }).affectedRows;
-  }
+    const allBindings = [...Object.values(data), ...whereBindings];
 
-  async updateOrInsert(conditions: Record<string, unknown>, data: Record<string, unknown>): Promise<void> {
-    Object.entries(conditions).forEach(([k, v]) => this.where(k, v));
-    const exists = (await this.count()) > 0;
-    if (exists) { await this.update(data); } else { await this.insert({ ...conditions, ...data }); }
+    const executor = this._connection || this._pool;
+    if (isPg) {
+      const formattedSql = this.formatPlaceholders(sql);
+      const res = await (executor as any).query(formattedSql, allBindings);
+      return res.rowCount ?? 0;
+    } else {
+      const [result] = await (executor as Pool).query(sql, allBindings);
+      return (result as { affectedRows: number }).affectedRows;
+    }
   }
 
   async delete(): Promise<number> {
-    let sql = "DELETE FROM `" + this._table + "`";
-    const { sql: whereSql, bindings: whereBindings } = this._compileWheres();
+    const escTable = this._parseTableName(this._table);
+    let sql = `DELETE FROM ${escTable}`;
+    const { sql: whereSql, bindings } = this._compileWheres();
     if (whereSql) sql += " WHERE " + whereSql;
-    const executor = this._connection || this._pool;
-    const [result] = await (executor as Pool).query(sql, whereBindings);
-    return (result as { affectedRows: number }).affectedRows;
-  }
 
-  async truncate(): Promise<void> {
     const executor = this._connection || this._pool;
-    await (executor as Pool).query("TRUNCATE TABLE `" + this._table + "`");
+    if (this._dbType === "postgresql") {
+      const formattedSql = this.formatPlaceholders(sql);
+      const res = await (executor as any).query(formattedSql, bindings);
+      return res.rowCount ?? 0;
+    } else {
+      const [result] = await (executor as Pool).query(sql, bindings);
+      return (result as { affectedRows: number }).affectedRows;
+    }
   }
 
   async count(column = "*"): Promise<number> {
+    const escCol = column === "*" ? "*" : this._escapeCol(column);
     const escTable = this._parseTableName(this._table);
-    const col = column === "*" ? "*" : this._escapeCol(column);
-    let sql = "SELECT COUNT(" + col + ") AS aggregate FROM " + escTable;
+    let sql = `SELECT COUNT(${escCol}) AS total FROM ${escTable}`;
     if (this._joins.length > 0) sql += " " + this._joins.join(" ");
     const { sql: whereSql, bindings } = this._compileWheres();
     if (whereSql) sql += " WHERE " + whereSql;
-    const rows = await this._execute(sql, bindings) as Array<{ aggregate: number }>;
-    return Number(rows[0]?.aggregate ?? 0);
+    const rows = (await this._execute(sql, bindings)) as Array<{ total: number }>;
+    return Number(rows[0]?.total ?? 0);
   }
 
-  async sum(column: string): Promise<number> { return this._aggregate("SUM", column); }
-  async avg(column: string): Promise<number> { return this._aggregate("AVG", column); }
-  async min(column: string): Promise<number> { return this._aggregate("MIN", column); }
-  async max(column: string): Promise<number> { return this._aggregate("MAX", column); }
+  async sum(column: string): Promise<number> {
+    return this._aggregate("SUM", column);
+  }
 
-  private async _aggregate(fn: string, column: string): Promise<number> {
+  async avg(column: string): Promise<number> {
+    return this._aggregate("AVG", column);
+  }
+
+  async min(column: string): Promise<number> {
+    return this._aggregate("MIN", column);
+  }
+
+  async max(column: string): Promise<number> {
+    return this._aggregate("MAX", column);
+  }
+
+  private async _aggregate(func: string, column: string): Promise<number> {
+    const escCol = this._escapeCol(column);
     const escTable = this._parseTableName(this._table);
-    let sql = "SELECT " + fn + "(" + this._escapeCol(column) + ") AS aggregate FROM " + escTable;
+    let sql = `SELECT ${func}(${escCol}) AS aggregate FROM ${escTable}`;
     if (this._joins.length > 0) sql += " " + this._joins.join(" ");
     const { sql: whereSql, bindings } = this._compileWheres();
     if (whereSql) sql += " WHERE " + whereSql;
-    const rows = await this._execute(sql, bindings) as Array<{ aggregate: number }>;
+    const rows = (await this._execute(sql, bindings)) as Array<{ aggregate: number }>;
     return Number(rows[0]?.aggregate ?? 0);
   }
 
   async increment(column: string, amount = 1, extra: Record<string, unknown> = {}): Promise<number> {
     const col = this._escapeCol(column);
+    const escTable = this._parseTableName(this._table);
     const extraKeys = Object.keys(extra);
-    const extraSql = extraKeys.map((k) => ", `" + k + "` = ?").join("");
+    const extraSql = extraKeys.map((k) => `, ${this._escapeIdentifier(k)} = ?`).join("");
     const extraVals = Object.values(extra);
-    let sql = "UPDATE `" + this._table + "` SET " + col + " = " + col + " + ?" + extraSql;
+    let sql = `UPDATE ${escTable} SET ${col} = ${col} + ?${extraSql}`;
     const { sql: whereSql, bindings: whereBindings } = this._compileWheres();
     if (whereSql) sql += " WHERE " + whereSql;
+
+    const allBindings = [amount, ...extraVals, ...whereBindings];
     const executor = this._connection || this._pool;
-    const [result] = await (executor as Pool).query(sql, [amount, ...extraVals, ...whereBindings]);
-    return (result as { affectedRows: number }).affectedRows;
+    if (this._dbType === "postgresql") {
+      const formattedSql = this.formatPlaceholders(sql);
+      const res = await (executor as any).query(formattedSql, allBindings);
+      return res.rowCount ?? 0;
+    } else {
+      const [result] = await (executor as Pool).query(sql, allBindings);
+      return (result as { affectedRows: number }).affectedRows;
+    }
   }
 
   async decrement(column: string, amount = 1, extra: Record<string, unknown> = {}): Promise<number> {

@@ -5,6 +5,7 @@ import { AuditService } from "../database/audit.service";
 import { ExportService } from "../helpers/export.service";
 import { BackupService } from "../database/backup.service";
 import { QueryBuilder } from "../database/query-builder";
+import { OmniDbService } from "../database/omni-db.service";
 import * as fs from "fs";
 
 describe("OmniFlow Enterprise ERP Core Engines", () => {
@@ -173,6 +174,54 @@ describe("OmniFlow Enterprise ERP Core Engines", () => {
       const qb = new QueryBuilder("products", {} as any);
       qb.where("id", 1).sharedLock();
       expect(qb.toSql()).toContain("LOCK IN SHARE MODE");
+    });
+  });
+
+  describe("Dual-Database Dialect Support (MySQL & PostgreSQL)", () => {
+    it("should format SQL with MySQL backticks and ? placeholders by default", () => {
+      const qb = new QueryBuilder("users", {} as any);
+      qb.where("email", "test@example.com").where("status", "active");
+      const compiled = qb.toSqlWithBindings();
+      expect(compiled.sql).toContain("`users`");
+      expect(compiled.sql).toContain("`email` = ?");
+      expect(compiled.sql).toContain("`status` = ?");
+      expect(compiled.bindings).toEqual(["test@example.com", "active"]);
+    });
+
+    it("should format SQL with PostgreSQL double quotes and $1, $2 placeholders", () => {
+      const qb = new QueryBuilder("users", {} as any);
+      qb.setDbType("postgresql");
+      qb.where("email", "test@example.com").where("status", "active");
+      const compiled = qb.toSqlWithBindings();
+      expect(compiled.sql).toContain('"users"');
+      expect(compiled.sql).toContain('"email" = $1');
+      expect(compiled.sql).toContain('"status" = $2');
+      expect(compiled.bindings).toEqual(["test@example.com", "active"]);
+    });
+
+    it("should adapt sharedLock() dialect-specifically: LOCK IN SHARE MODE vs FOR SHARE", () => {
+      const mysqlQb = new QueryBuilder("orders", {} as any);
+      mysqlQb.setDbType("mysql").where("id", 10).sharedLock();
+      expect(mysqlQb.toSql()).toContain("LOCK IN SHARE MODE");
+
+      const pgQb = new QueryBuilder("orders", {} as any);
+      pgQb.setDbType("postgresql").where("id", 10).sharedLock();
+      expect(pgQb.toSql()).toContain("FOR SHARE");
+      expect(pgQb.toSql()).not.toContain("LOCK IN SHARE MODE");
+    });
+
+    it("should recognize both MySQL and PostgreSQL deadlock error codes in OmniDbService", () => {
+      const mysqlDeadlock = { errno: 1213, message: "Deadlock found when trying to get lock" };
+      const mysqlTimeout = { errno: 1205, message: "Lock wait timeout exceeded" };
+      const pgDeadlock = { code: "40P01", message: "deadlock detected" };
+      const pgLockNotAvail = { code: "55P03", message: "lock not available" };
+      const genericError = { code: "23505", message: "unique violation" };
+
+      expect(OmniDbService.isDeadlockError(mysqlDeadlock)).toBe(true);
+      expect(OmniDbService.isDeadlockError(mysqlTimeout)).toBe(true);
+      expect(OmniDbService.isDeadlockError(pgDeadlock)).toBe(true);
+      expect(OmniDbService.isDeadlockError(pgLockNotAvail)).toBe(true);
+      expect(OmniDbService.isDeadlockError(genericError)).toBe(false);
     });
   });
 });

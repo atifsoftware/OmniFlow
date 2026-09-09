@@ -13,6 +13,10 @@ export class BaseModel {
   static _globalScopes: Map<string, (builder: QueryBuilder) => void> = new Map();
   static _db: OmniDbService;
 
+  static setDb(db: OmniDbService): void {
+    this._db = db;
+  }
+
   protected _attributes: Record<string, unknown> = {};
   protected _exists = false;
 
@@ -328,7 +332,7 @@ export class OmniQueryProxy {
   async min(column: string): Promise<number> { this._applyCriteria(); return this.qb.min(column); }
   async max(column: string): Promise<number> { this._applyCriteria(); return this.qb.max(column); }
   async exists(): Promise<boolean> { this._applyCriteria(); return this.qb.exists(); }
-  async pluck<V = unknown>(column: string): Promise<V[]> { return this.qb.pluck<V>(column); }
+  async pluck<V = unknown>(column: string): Promise<V[]> { return this.qb.pluck<V>(column) as Promise<V[]>; }
 
   async update(data: Record<string, unknown>): Promise<number> {
     this._applyCriteria();

@@ -39,6 +39,7 @@ export class BackupService {
     const compress = options.compress !== false;
     const keepLast = options.keepLast || 7;
     const dir = BackupService.getBackupDir();
+    const isPg = this.db.getDbType() === "postgresql";
 
     const timestamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14);
     const dbName = process.env.DB_NAME || "omniflow_erp_db";
@@ -46,9 +47,16 @@ export class BackupService {
     const finalFilename = compress ? baseFilename + ".gz" : baseFilename;
     const finalPath = path.join(dir, finalFilename);
 
-    // Get all tables
-    const tableRows = await this.db.query<any[]>("SHOW TABLES");
-    const tables = tableRows.map((r: any) => Object.values(r)[0] as string);
+    let tables: string[] = [];
+    if (isPg) {
+      const rows = await this.db.query<any[]>(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'"
+      );
+      tables = rows.map((r: any) => r.table_name);
+    } else {
+      const tableRows = await this.db.query<any[]>("SHOW TABLES");
+      tables = tableRows.map((r: any) => Object.values(r)[0] as string);
+    }
 
     const fileStream = fs.createWriteStream(finalPath);
     const writeTarget = compress ? zlib.createGzip() : fileStream;
@@ -68,22 +76,28 @@ export class BackupService {
 
     try {
       await write("-- ========================================================\n");
-      await write("-- OmniFlow Database Backup\n");
+      await write("-- OmniFlow Database Backup (" + (isPg ? "PostgreSQL" : "MySQL") + ")\n");
       await write("-- Database: " + dbName + "\n");
       await write("-- Date: " + new Date().toISOString() + "\n");
       await write("-- ========================================================\n\n");
-      await write("SET FOREIGN_KEY_CHECKS = 0;\n");
-      await write("SET SQL_MODE = \"NO_AUTO_VALUE_ON_ZERO\";\n\n");
+
+      if (!isPg) {
+        await write("SET FOREIGN_KEY_CHECKS = 0;\n");
+        await write("SET SQL_MODE = \"NO_AUTO_VALUE_ON_ZERO\";\n\n");
+      }
 
       for (const table of tables) {
-        await write("DROP TABLE IF EXISTS `" + table + "`;\n");
+        const escTable = isPg ? '"' + table + '"' : "`" + table + "`";
+        await write("DROP TABLE IF EXISTS " + escTable + ";\n");
 
-        const createRows = await this.db.query<any[]>("SHOW CREATE TABLE `" + table + "`");
-        if (createRows[0] && createRows[0]["Create Table"]) {
-          await write(createRows[0]["Create Table"] + ";\n\n");
+        if (!isPg) {
+          const createRows = await this.db.query<any[]>("SHOW CREATE TABLE `" + table + "`");
+          if (createRows[0] && createRows[0]["Create Table"]) {
+            await write(createRows[0]["Create Table"] + ";\n\n");
+          }
         }
 
-        const countRow = await this.db.query<any[]>("SELECT COUNT(*) as total FROM `" + table + "`");
+        const countRow = await this.db.query<any[]>("SELECT COUNT(*) as total FROM " + escTable);
         const totalRows = Number((countRow[0] as any)?.total ?? 0);
 
         if (totalRows > 0) {
@@ -91,11 +105,11 @@ export class BackupService {
           const chunkSize = 200;
 
           while (offset < totalRows) {
-            const rows = await this.db.query<any[]>("SELECT * FROM `" + table + "` LIMIT " + chunkSize + " OFFSET " + offset);
+            const rows = await this.db.query<any[]>("SELECT * FROM " + escTable + " LIMIT " + chunkSize + " OFFSET " + offset);
             if (!rows || rows.length === 0) break;
 
             const cols = Object.keys(rows[0]);
-            const escCols = cols.map((c) => "`" + c + "`").join(", ");
+            const escCols = cols.map((c) => isPg ? '"' + c + '"' : "`" + c + "`").join(", ");
 
             const valueStrings = rows.map((r: any) => {
               const vals = cols.map((c) => {
@@ -110,13 +124,15 @@ export class BackupService {
               return "(" + vals.join(", ") + ")";
             });
 
-            await write("INSERT INTO `" + table + "` (" + escCols + ") VALUES\n  " + valueStrings.join(",\n  ") + ";\n\n");
+            await write("INSERT INTO " + escTable + " (" + escCols + ") VALUES\n  " + valueStrings.join(",\n  ") + ";\n\n");
             offset += chunkSize;
           }
         }
       }
 
-      await write("SET FOREIGN_KEY_CHECKS = 1;\n");
+      if (!isPg) {
+        await write("SET FOREIGN_KEY_CHECKS = 1;\n");
+      }
       await write("-- End of OmniFlow Backup\n");
 
       await new Promise<void>((resolve, reject) => {
