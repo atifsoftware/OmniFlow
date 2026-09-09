@@ -48,3 +48,5 @@ Thumbs.db
 *.code-workspace
 
 *.sql
+
+*.tsbuildinfo
