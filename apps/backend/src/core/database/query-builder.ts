@@ -24,6 +24,7 @@ export class QueryBuilder {
   private _groupBy: string | null = null;
   private _having: string | null = null;
   private _havingBindings: unknown[] = [];
+  private _lock: string | null = null;
   private _pool: Pool;
 
   constructor(table: string, pool: Pool, connection: PoolConnection | Pool | null = null) {
@@ -228,6 +229,17 @@ export class QueryBuilder {
     return { sql, bindings };
   }
 
+
+  forUpdate(): this {
+    this._lock = "FOR UPDATE";
+    return this;
+  }
+
+  sharedLock(): this {
+    this._lock = "LOCK IN SHARE MODE";
+    return this;
+  }
+
   toSql(): string {
     const escTable = this._parseTableName(this._table);
     let sql = "SELECT " + this._select + " FROM " + escTable;
@@ -240,6 +252,9 @@ export class QueryBuilder {
     if (this._limit !== null) {
       sql += " LIMIT " + this._limit;
       if (this._offset !== null) sql += " OFFSET " + this._offset;
+    }
+    if (this._lock) {
+      sql += " " + this._lock;
     }
     return sql;
   }

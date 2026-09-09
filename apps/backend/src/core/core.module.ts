@@ -1,3 +1,8 @@
+import { DocNumberService } from "./database/doc-number.service";
+import { AuditService } from "./database/audit.service";
+import { BackupService } from "./database/backup.service";
+import { ExportService } from "./helpers/export.service";
+import { PdfService } from "./pdf/pdf.service";
 import { Global, Module } from "@nestjs/common";
 import { OmniContextService } from "./context/omni-context.service";
 import { OmniCacheService } from "./cache/omni-cache.service";
@@ -22,6 +27,11 @@ import { OmniLoggerService } from "./logger/omni-logger.service";
     OmniTokenModule,
     OmniImageModule,
     OmniAiModule,
+    DocNumberService,
+    AuditService,
+    BackupService,
+    ExportService,
+    PdfService,
   ],
   controllers: [StorageController],
   providers: [
@@ -33,6 +43,11 @@ import { OmniLoggerService } from "./logger/omni-logger.service";
     GateService,
     OmniCanGuard,
     OmniLoggerService,
+    DocNumberService,
+    AuditService,
+    BackupService,
+    ExportService,
+    PdfService,
   ],
   exports: [
     OmniContextService,

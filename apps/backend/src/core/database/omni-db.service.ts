@@ -90,27 +90,53 @@ export class OmniDbService implements OnModuleInit {
     return this.pool.getConnection();
   }
 
-  async transaction<T>(callback: (db: OmniDbTransaction) => Promise<T>): Promise<T> {
-    const connection = await this.pool.getConnection();
-    try {
-      await connection.beginTransaction();
+  async transaction<T>(
+    callback: (db: OmniDbTransaction) => Promise<T>,
+    options: { maxRetries?: number; backoffMs?: number } = {}
+  ): Promise<T> {
+    const maxRetries = options.maxRetries ?? 3;
+    const backoffMs = options.backoffMs ?? 50;
 
-      const txDb: OmniDbTransaction = {
-        table: (name: string) => new QueryBuilder(name, this.pool, connection),
-        query: async (sql: string, params: unknown[] = []) => {
-          const [rows] = await connection.query(sql, params);
-          return rows as unknown[];
-        },
-      };
+    let attempt = 0;
+    while (true) {
+      attempt++;
+      const connection = await this.pool.getConnection();
+      try {
+        await connection.beginTransaction();
 
-      const result = await callback(txDb);
-      await connection.commit();
-      return result;
-    } catch (err) {
-      await connection.rollback();
-      throw err;
-    } finally {
-      connection.release();
+        const txDb: OmniDbTransaction = {
+          table: (name: string) => new QueryBuilder(name, this.pool, connection),
+          query: async (sql: string, params: unknown[] = []) => {
+            const [rows] = await connection.query(sql, params);
+            return rows as unknown[];
+          },
+        };
+
+        const result = await callback(txDb);
+        await connection.commit();
+        return result;
+      } catch (err: any) {
+        await connection.rollback().catch(() => {});
+
+        const isDeadlock =
+          err.code === "ER_LOCK_DEADLOCK" ||
+          err.errno === 1213 ||
+          err.code === "ER_LOCK_WAIT_TIMEOUT" ||
+          err.errno === 1205;
+
+        if (isDeadlock && attempt <= maxRetries) {
+          const delay = backoffMs * Math.pow(2, attempt - 1);
+          this.logger.warn(
+            `[OmniDb Deadlock] Auto-retrying transaction attempt ${attempt}/${maxRetries} after ${delay}ms: ${err.message}`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        throw err;
+      } finally {
+        connection.release();
+      }
     }
   }
 

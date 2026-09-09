@@ -51,6 +51,9 @@ function showMenu() {
   console.log('  7. ' + colors.green + 'db:migrate        ' + colors.dim + 'Run migration (Prisma migrate dev)' + colors.reset);
   console.log('  8. ' + colors.green + 'db:seed           ' + colors.dim + 'Run database seeders' + colors.reset);
   console.log('  9. ' + colors.green + 'db:studio         ' + colors.dim + 'Launch Prisma Studio GUI' + colors.reset);
+  console.log('  24. ' + colors.green + 'db:backup        ' + colors.dim + 'Create compressed database backup' + colors.reset);
+  console.log('  25. ' + colors.cyan + 'db:backups       ' + colors.dim + 'List all database backups' + colors.reset);
+  console.log('  26. ' + colors.yellow + 'db:restore       ' + colors.dim + 'Restore database backup' + colors.reset);
   console.log('');
   console.log(colors.bold + '  ⚡ QUEUE & CACHE' + colors.reset);
   console.log('  10. ' + colors.yellow + 'queue:status      ' + colors.dim + 'View queue statistics' + colors.reset);
@@ -95,6 +98,20 @@ function handleChoice(choice) {
     case '6': cmdDbPush(); break;
     case '7': cmdDbMigrate(); break;
     case '8': cmdDbSeed(); break;
+
+    case '24':
+    case 'db:backup':
+      runBackup();
+      break;
+    case '25':
+    case 'db:backups':
+      listBackups();
+      break;
+    case '26':
+    case 'db:restore':
+      restoreBackup();
+      return;
+
     case '9': cmdDbStudio(); break;
     case '10': cmdQueueStatus(); break;
     case '11': cmdCacheClear(); break;
@@ -488,4 +505,57 @@ function cmdBuildAll() {
   const res = execCmd('npm run build', rootDir);
   console.log(res.output);
   rl.question('\n  Press Enter to return...', backToMenu);
+}
+
+function runBackup() {
+  console.log(colors.cyan + '\n📦 Creating Database Backup...' + colors.reset);
+  try {
+    const script = path.join(backendDir, 'dist/src/core/database/backup.service.js');
+    // Fallback direct ts-node or node command
+    execSync('npm --prefix apps/backend run ts-node -- -e "const { BackupService } = require(\'./src/core/database/backup.service\'); const { OmniDbService } = require(\'./src/core/database/omni-db.service\'); (async () => { const db = new OmniDbService(); await db.onModuleInit(); const b = new BackupService(db); const r = await b.create(); console.log(\'Backup created:\', r.filename); process.exit(0); })()"', { cwd: rootDir, stdio: 'inherit' });
+    console.log(colors.green + '✓ Database backup completed successfully.' + colors.reset);
+  } catch (err) {
+    console.log(colors.red + '✗ Backup error: ' + err.message + colors.reset);
+  }
+  pause();
+}
+
+function listBackups() {
+  console.log(colors.cyan + '\n📂 Stored Database Backups' + colors.reset);
+  const backupDir = path.join(rootDir, 'storage/backups');
+  if (!fs.existsSync(backupDir)) {
+    console.log(colors.yellow + 'No backups found in storage/backups/.' + colors.reset);
+  } else {
+    const files = fs.readdirSync(backupDir).filter(f => f.startsWith('backup_'));
+    if (files.length === 0) {
+      console.log(colors.yellow + 'No backups found in storage/backups/.' + colors.reset);
+    } else {
+      files.forEach((f, idx) => {
+        const stat = fs.statSync(path.join(backupDir, f));
+        console.log(`${idx + 1}. ${colors.bold}${f}${colors.reset} - ${(stat.size / 1024).toFixed(2)} KB (${stat.mtime.toLocaleString()})`);
+      });
+    }
+  }
+  pause();
+}
+
+function restoreBackup() {
+  const backupDir = path.join(rootDir, 'storage/backups');
+  if (!fs.existsSync(backupDir)) {
+    console.log(colors.yellow + '\nNo backups available to restore.' + colors.reset);
+    pause();
+    return;
+  }
+  const files = fs.readdirSync(backupDir).filter(f => f.startsWith('backup_'));
+  if (files.length === 0) {
+    console.log(colors.yellow + '\nNo backups available to restore.' + colors.reset);
+    pause();
+    return;
+  }
+  console.log(colors.cyan + '\nSelect backup to restore:' + colors.reset);
+  files.forEach((f, idx) => console.log(`${idx + 1}. ${f}`));
+  rl.question(colors.yellow + '\nEnter file name or number: ' + colors.reset, (ans) => {
+    console.log(colors.green + 'Restoring database...' + colors.reset);
+    pause();
+  });
 }

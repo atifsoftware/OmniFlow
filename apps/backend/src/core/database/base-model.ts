@@ -10,6 +10,7 @@ export class BaseModel {
   static hidden: string[] = [];
   static fillable: string[] = [];
   static softDeletes = false;
+  static _globalScopes: Map<string, (builder: QueryBuilder) => void> = new Map();
   static _db: OmniDbService;
 
   protected _attributes: Record<string, unknown> = {};
@@ -45,6 +46,20 @@ export class BaseModel {
       offset > 0 ? "_" + p1.toLowerCase() : p1.toLowerCase()
     );
     return name + "s";
+  }
+
+
+  static addGlobalScope(name: string, scope: (builder: QueryBuilder) => void): void {
+    if (!this._globalScopes) {
+      this._globalScopes = new Map();
+    }
+    this._globalScopes.set(name, scope);
+  }
+
+  static withoutGlobalScope(name: string): OmniQueryProxy {
+    const proxy = this.query();
+    proxy.ignoreScope(name);
+    return proxy;
   }
 
   static query(): OmniQueryProxy {
@@ -192,6 +207,13 @@ export class OmniRelation {
 
 export class OmniQueryProxy {
   private _eagerLoads: string[] = [];
+  private _ignoredScopes: Set<string> = new Set();
+  private _scopesApplied = false;
+
+  ignoreScope(name: string): this {
+    this._ignoredScopes.add(name);
+    return this;
+  }
   private _withTrashed = false;
   private _onlyTrashed = false;
 
@@ -253,7 +275,21 @@ export class OmniQueryProxy {
     });
   }
 
+  private _applyScopes(): void {
+    if (this._scopesApplied) return;
+    this._scopesApplied = true;
+    const scopes = this.ModelClass._globalScopes;
+    if (scopes) {
+      for (const [name, scope] of scopes.entries()) {
+        if (!this._ignoredScopes.has(name)) {
+          scope(this.qb);
+        }
+      }
+    }
+  }
+
   async get(): Promise<BaseModel[]> {
+    this._applyScopes();
     this._applyCriteria();
     const rows = await this.qb.get<Record<string, unknown>>();
     const instances = this._hydrate(rows);
@@ -266,6 +302,7 @@ export class OmniQueryProxy {
   }
 
   async first(): Promise<BaseModel | null> {
+    this._applyScopes();
     this._applyCriteria();
     this.qb.limit(1);
     const rows = await this.qb.get<Record<string, unknown>>();
