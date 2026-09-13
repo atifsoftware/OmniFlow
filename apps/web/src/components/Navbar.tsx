@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { OmniLogo } from './OmniLogo';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -26,24 +27,8 @@ export function Navbar() {
         height: '70px',
       }}>
         {/* Logo */}
-        <Link href="/" style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          textDecoration: 'none',
-          color: 'var(--text-primary)',
-          fontWeight: 700,
-          fontSize: '1.25rem',
-        }}>
-          <span style={{
-            background: 'linear-gradient(135deg, #06b6d4, #3b82f6, #a855f7)',
-            borderRadius: '8px',
-            padding: '6px 10px',
-            fontSize: '1rem',
-            boxShadow: '0 2px 10px rgba(6, 182, 212, 0.3)'
-          }}>⚡</span>
-          <span>OmniFlow</span>
-          <span className="badge badge-purple" style={{ fontSize: '0.65rem' }}>Enterprise</span>
+        <Link href="/" style={{ textDecoration: 'none' }}>
+          <OmniLogo size={36} showText={true} useImage={true} />
         </Link>
 
         {/* Navigation Links */}

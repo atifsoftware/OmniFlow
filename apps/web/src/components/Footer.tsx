@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { OmniLogo } from './OmniLogo';
 
 export function Footer() {
   const pathname = usePathname();
@@ -44,31 +45,8 @@ export function Footer() {
         >
           {/* Col 1: Brand & Overview */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <Link
-              href="/"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '10px',
-                textDecoration: 'none',
-                color: 'var(--text-primary)',
-                fontWeight: 700,
-                fontSize: '1.25rem',
-              }}
-            >
-              <span
-                style={{
-                  background: 'linear-gradient(135deg, #e65100, #ff851b)',
-                  borderRadius: '8px',
-                  padding: '5px 10px',
-                  fontSize: '1rem',
-                  color: '#fff',
-                  boxShadow: '0 2px 10px rgba(230, 81, 0, 0.4)',
-                }}
-              >
-                ⚡
-              </span>
-              <span>OmniFlow ERP</span>
+            <Link href="/" style={{ textDecoration: 'none' }}>
+              <OmniLogo size={36} showText={true} useImage={true} />
             </Link>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.7, margin: 0 }}>
               পরবর্তী প্রজন্মের আধুনিক এন্টারপ্রাইজ ERP ও ই-কমার্স প্ল্যাটফর্ম। উচ্চ-গতি, জিরো-ডাউনটাইম ও শতভাগ বাংলা ইউনিকোড ইঞ্জিনে নির্মিত।

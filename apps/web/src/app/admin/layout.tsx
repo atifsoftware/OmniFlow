@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { OmniLogo } from '@/components/OmniLogo';
 
 export interface ToastItem {
   id: string;
@@ -114,36 +115,8 @@ export default function AdminLayout({
       <aside className={`adm-sidebar ${sidebarOpen ? 'open' : ''}`} id="admSidebar">
         {/* Brand Header */}
         <div className="adm-brand">
-          <Link href="/admin" className="text-decoration-none">
-            <div className="brand-logo">
-              <div
-                className="brand-logo-img-wrapper"
-                style={{ overflow: 'hidden', borderRadius: '10px', background: '#0f172a' }}
-              >
-                <div
-                  className="brand-logo-icon"
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    fontSize: '15px',
-                    background: 'linear-gradient(135deg, #e65100, #ff6d00)',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                  }}
-                >
-                  <i className="fas fa-cubes"></i>
-                </div>
-              </div>
-              <div className="brand-text text-start">
-                <div className="brand-name">
-                  OmniFlow <span style={{ color: '#ffcc02' }}>ERP</span>
-                </div>
-                <div className="brand-sub">Enterprise Control Hub</div>
-              </div>
-            </div>
+          <Link href="/admin" style={{ textDecoration: 'none' }}>
+            <OmniLogo size={34} showText={true} useImage={true} subtitle="Enterprise Control Hub" />
           </Link>
         </div>
 
