@@ -1,16 +1,40 @@
-# OmniFlow ⚡
-### Enterprise Full-Stack Monorepo Framework
+<p align="center">
+  <img src="logo.png" alt="OmniFlow Enterprise Logo" width="180" style="border-radius: 28px; box-shadow: 0 12px 35px rgba(230,81,0,0.35);" />
+</p>
 
-[![CI Pipeline](https://github.com/atifsoftware/OmniFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/atifsoftware/OmniFlow/actions/workflows/ci.yml)
-[![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=flat-square&logo=nestjs&logoColor=white)](https://nestjs.com/)
-[![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-[![React Native](https://img.shields.io/badge/React_Native-61DAFB?style=flat-square&logo=react&logoColor=black)](https://reactnative.dev/)
-[![Expo](https://img.shields.io/badge/Expo-000020?style=flat-square&logo=expo&logoColor=white)](https://expo.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
-[![Tests](https://img.shields.io/badge/tests-49%20passed%20(100%25)-brightgreen.svg?style=flat-square)](https://jestjs.io/)
+<h1 align="center">OmniFlow ⚡</h1>
+<h3 align="center">Next-Generation Enterprise Full-Stack ERP & E-Commerce Platform</h3>
 
-**OmniFlow** is a modern, modular, enterprise-grade framework designed for high-scale E-Commerce and ERP systems. Powered by **NestJS** on the backend, **Next.js** for the web storefront and admin dashboard, **React Native (Expo)** for mobile applications, and **TypeScript** across the entire stack.
+<p align="center">
+  <strong>Unified High-Velocity TypeScript Monorepo: NestJS 10 • Next.js 14 • React Native (Expo) • Dual-Dialect OmniDB</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/atifsoftware/OmniFlow/actions/workflows/ci.yml"><img src="https://github.com/atifsoftware/OmniFlow/actions/workflows/ci.yml/badge.svg" alt="CI Pipeline" /></a>
+  <a href="https://nestjs.com/"><img src="https://img.shields.io/badge/NestJS-10.0-E0234E?style=flat-square&logo=nestjs&logoColor=white" alt="NestJS" /></a>
+  <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-14.2-000000?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js" /></a>
+  <a href="https://reactnative.dev/"><img src="https://img.shields.io/badge/React_Native-Expo-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React Native" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.4-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" /></a>
+  <a href="https://www.mysql.com/"><img src="https://img.shields.io/badge/Database-MySQL_%7C_PostgreSQL-4479A1?style=flat-square&logo=mysql&logoColor=white" alt="Database" /></a>
+  <a href="http://localhost:4000/api/docs"><img src="https://img.shields.io/badge/Swagger-OpenAPI_3.0-85EA2D?style=flat-square&logo=swagger&logoColor=black" alt="Swagger" /></a>
+  <a href="https://jestjs.io/"><img src="https://img.shields.io/badge/Tests-49%20passed%20(100%25)-brightgreen.svg?style=flat-square" alt="Tests" /></a>
+</p>
+
+---
+
+**OmniFlow** is a modern, modular, enterprise-grade framework designed for high-scale E-Commerce and ERP systems. Built with **NestJS 10** on the backend, **Next.js 14** for the web storefront and AeroMVC-grade admin dashboard, **React Native (Expo)** for mobile applications, and **TypeScript** across the entire stack.
+
+---
+
+## 🌐 Live System Endpoints (Local)
+
+| Service | Port / URL | Description |
+|:---|:---|:---|
+| 🛍️ **Web Storefront** | [`http://localhost:3000`](http://localhost:3000) | Customer-facing Next.js 14 storefront with rich product presentation |
+| 🎛️ **ERP Admin Portal** | [`http://localhost:3000/admin`](http://localhost:3000/admin) | AeroMVC-grade Nursery ERP dashboard, live orders, catalog, users, settings |
+| ⚡ **Backend REST API** | [`http://localhost:4000/api/v1`](http://localhost:4000/api/v1) | NestJS 10 non-blocking enterprise API with L2 caching and OmniDB |
+| 📖 **Swagger OpenAPI Docs** | [`http://localhost:4000/api/docs`](http://localhost:4000/api/docs) | Interactive API exploration, DTO schemas, and try-it-out console |
+| 📱 **Mobile App (Expo)** | [`http://localhost:8081`](http://localhost:8081) | Cross-platform iOS & Android mobile application with Hermes engine |
 
 ---
 
@@ -35,20 +59,45 @@ OmniFlow Monorepo
 | Layer | Technology | Role |
 |:---|:---|:---|
 | **Backend** | NestJS + TypeScript | Enterprise REST API, Business Logic, OmniDB, Queues, PDF Engine |
-| **Web & Admin** | Next.js (App Router) + React | SEO-friendly Storefront + Interactive ERP Portal |
+| **Web & Admin** | Next.js (App Router) + React | SEO-friendly Storefront + AeroMVC-grade ERP Portal |
 | **Mobile** | React Native + Expo | Cross-platform iOS & Android mobile application |
-| **Database** | MySQL & PostgreSQL (Dual-Dialect OmniDB) | Zero-code-change switching, auto-dialect detection, connection pooling, active records, auto deadlock retry |
+| **Database** | MySQL & PostgreSQL (Dual-Dialect OmniDB) | Zero-code-change switching, connection pooling, active records, deadlock auto-retry |
 | **Shared** | `@omniflow/shared` | Common types, DTOs, NumberToWords, Money, validation contracts |
 | **AI Engine** | Google Gemini (Native HTTPS) | AI Assistant, business analytics, and automation |
 
 ---
 
-## 🛒 Enterprise E-commerce ERP Core Engines (NEW!)
+## 🎛️ AeroMVC-Grade ERP Admin Panel (`apps/web/src/app/admin`)
 
-OmniFlow now incorporates enterprise-grade, battle-tested ERP core engines:
+OmniFlow features an enterprise admin dashboard inspired by the robust architecture and design of **AeroMVC**:
+
+- 📊 **Real-Time System Dashboard**:
+  - Live digital clock with seconds, date badges, and system health status.
+  - 4 Real-time KPI cards: Total Revenue, Total Orders, 12ms Average Latency, and Active OmniDB Connection Pool.
+  - Responsive API Traffic and Sales analytics bar chart with monthly/weekly toggles.
+  - 6 One-click Quick Actions (Swagger console, live orders, OmniDB pool, cache flush, Gzip backup, system config).
+- 🛍️ **Orders & Sales Management** (`/admin/orders`):
+  - Paginated orders table with method and status badges.
+  - Instant Bengali Unicode PDF invoice generation and download.
+- 📦 **Inventory & Product Catalog** (`/admin/catalog`):
+  - SKU tracking, stock status filters, and Code128 barcode generation.
+- 👥 **Users & Access Control (RBAC)** (`/admin/users`):
+  - Filterable user management, role assignments (Admin, Manager, Staff, Customer), and account modals.
+- ⚙️ **System Configuration** (`/admin/settings`):
+  - Tabbed controls for General, Database Pool, Security & Guards, Cache & Engines, and Branding.
+- 🎨 **Visual Excellence**:
+  - Deep cyber amber/slate color system (`--adm-primary: #e65100`, `#ff851b`).
+  - Seamless Light / Dark mode persistence with localStorage.
+  - Dedicated toast notification system for instant feedback.
+
+---
+
+## 🛒 Enterprise E-commerce ERP Core Engines
+
+OmniFlow incorporates 8 battle-tested, mission-critical ERP core engines:
 
 - 📄 **HTML-to-PDF Reporting Engine (`PdfService`)**:
-  - **Native Bengali Unicode & Ligatures**: Injected Google Fonts (*Noto Sans Bengali*, *Kalpurush*, *SolaimanLipi*) and OpenType ligature shaping (`font-feature-settings: "kern" 1, "liga" 1`) ensures complex Bengali conjuncts (*ক্ষ, জ্ঞ, ঙ্গ, ঞ্চ, ষ্ণ*) render flawlessly without broken glyphs.
+  - **Native Bengali Unicode & Ligatures**: Google Fonts (*Noto Sans Bengali*, *Kalpurush*) and OpenType ligature shaping (`font-feature-settings: "kern" 1, "liga" 1`) ensure complex Bengali conjuncts (*ক্ষ, জ্ঞ, ঙ্গ, ঞ্চ, ষ্ণ*) render flawlessly without broken glyphs.
   - **EJS Template Rendering**: Render dynamic invoices, challans, and bills from EJS views via `pdfService.loadView('reports/invoice', data)`.
   - **Flexible Delivery**: Stream directly to browser download (`pdf.download(res)`), preview inline (`pdf.inline(res)`), export binary buffer (`pdf.toBuffer()`), or save to disk (`pdf.save(path)`).
 - 🔤 **Number-to-Words Engine (বাংলা ও ইংরেজি - `@omniflow/shared`)**:
@@ -70,23 +119,6 @@ OmniFlow now incorporates enterprise-grade, battle-tested ERP core engines:
 - 🔒 **Pessimistic Row-Level Locking & Deadlock Auto-Retry**:
   - `qb.forUpdate()` and `qb.sharedLock()` in OmniDB QueryBuilder.
   - Automatic transaction deadlock retry (`ER_LOCK_DEADLOCK` / 1213) with exponential backoff.
-- 🌐 **Global Query Scopes**:
-  - Multi-tenant and multi-branch data isolation (`addGlobalScope`, `withoutGlobalScope`) in `BaseModel`.
-
----
-
-## ⚡ Framework Features
-
-- **OmniDB & Active Record ORM**: Fluent Knex/Eloquent-style QueryBuilder + BaseModel relationships.
-- **Personal Access Tokens**: Sanctum-style API tokens with SHA-256 hashing and granular abilities.
-- **Persistent MySQL Queue**: Enterprise background job worker with retries and failure backoff.
-- **Intelligent Exception Diagnostics**: Levenshtein typo suggestion and SQL error detection.
-- **DB-Sandboxed Test Runner**: Automated test runner executing within MySQL transactions with auto-rollback.
-- **OmniContext & Correlated Logging**: Multi-tenant async request context and slow-query auditing.
-- **Interactive CLI 3.0 (`npm run omni`)**: 26 commands for database backup/restore, queue, cache, AI, and full-stack servers.
-
----
-
 
 ---
 
@@ -130,6 +162,8 @@ DB_NAME=omniflow_db
 | **Auto Deadlock Retry** | Error codes `1213` & `1205` | Error codes `40P01` & `55P03` (Exponential backoff) |
 | **Zero-Config Backup** | Dumps `mysqldump` / SQL DDL + rows | Dumps `pg_dump` / PostgreSQL SQL DDL + rows |
 
+---
+
 ## 🧪 Running Tests
 
 OmniFlow includes **49 automated Jest test suites** (100% passing):
@@ -138,7 +172,7 @@ OmniFlow includes **49 automated Jest test suites** (100% passing):
 npm --prefix apps/backend run test
 ```
 
-```
+```text
 PASS src/core/cache/omni-cache.service.spec.ts
 PASS src/core/__tests__/erp-advanced-modules.spec.ts
 PASS src/modules/catalog/catalog.service.spec.ts
@@ -148,27 +182,6 @@ PASS src/modules/auth/auth.service.spec.ts
 Test Suites: 5 passed, 5 total
 Tests:       49 passed, 49 total (100%)
 ```
-
----
-
-## 🏎️ Core Performance & Architectural Pillars
-
-### 1. 🗄️ Database & Query Layer (`OmniDbService`)
-- **Connection Pooling**: Powered by `mysql2/promise` with `waitForConnections: true`, `enableKeepAlive: true`, and configurable pool limits (default: 10), eliminating repetitive TCP/DB handshakes.
-- **Lightweight QueryBuilder**: Bypasses heavy ORM runtime overheads for critical query paths, keeping CPU cycle consumption and memory overhead minimal.
-- **Atomic Transactions**: Full ACID compliance with database row-level locking for inventory updates and order checkouts, eliminating race conditions during high-volume flash sales.
-
-### 2. ⚡ Caching Architecture (`OmniCacheService`)
-- **L1 (In-Memory) + L2 (Redis) Dual-Tier**: Frequent read operations (catalog, product lists, categories) are served directly from RAM without hitting MySQL, slashing database read pressure by **80%–90%**.
-- **Wildcard Invalidation (`delByPattern`)**: When entities mutate, targeted cache keys are instantly invalidated (e.g., `products:list:*`), guaranteeing zero stale data.
-
-### 3. 🚀 Ultra-Lightweight Backend Runtime (`NestJS`)
-- **Memory Efficiency**: Even with full enterprise middlewares active (Helmet security headers, CookieParser, Trust Proxy, Rate Limiting, HTTP Response Compression), the entire backend process consumes only **~66 MB RAM**, proving zero memory leaks and clean event loops.
-- **Multi-Core Clustering**: Native PM2 cluster support (`npm run start:cluster`) scales request handling horizontally across all available CPU cores.
-
-### 4. 📱 High-Performance Frontend & Mobile Stack
-- **Next.js 14 (Web Storefront & ERP)**: Server-Side Rendering (SSR), Server Components, and automated image optimization deliver near-instant First Contentful Paint (FCP).
-- **Expo 51 / React Native (Mobile App)**: Powered by the **Hermes JavaScript Engine**, providing instant cold startup times and consistently smooth **60 FPS** UI interactions.
 
 ---
 
@@ -189,14 +202,14 @@ cp apps/backend/.env.example apps/backend/.env
 npm run build
 ```
 
-### 4. Run Applications
+### 4. Run Applications Locally
 - **Backend API Server (NestJS):**
   ```bash
-  npm run dev:backend    # Runs on http://localhost:4000/api/v1
+  npm run dev:backend    # Runs on http://localhost:4000/api/v1 (Swagger: /api/docs)
   ```
-- **Web Storefront & Admin (Next.js):**
+- **Web Storefront & Admin Portal (Next.js):**
   ```bash
-  npm run dev:web        # Runs on http://localhost:3000
+  npm run dev:web        # Runs on http://localhost:3000 (Admin: /admin)
   ```
 - **Mobile Application (Expo):**
   ```bash
@@ -217,11 +230,7 @@ npm run restart:cluster  # Zero-downtime cluster reload
 npm run omni
 ```
 
-### 7. API Documentation
-Swagger UI is automatically available at:
-`http://localhost:4000/api/docs`
-
 ---
 
 ## 📄 License
-MIT © 2026 OmniFlow Core Team
+MIT © 2026 [OmniFlow Core Team](https://github.com/atifsoftware/OmniFlow)
