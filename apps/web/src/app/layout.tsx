@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import '@/styles/admin.css';
-import { Navbar } from '@/components/Navbar';
-import { Footer } from '@/components/Footer';
+import { SiteShell } from '@/components/SiteShell';
 
 export const metadata: Metadata = {
   title: 'OmniFlow — Enterprise Full-Stack Platform',
@@ -41,9 +40,7 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <Navbar />
-        <main>{children}</main>
-        <Footer />
+        <SiteShell>{children}</SiteShell>
       </body>
     </html>
   );

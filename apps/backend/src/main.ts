@@ -72,6 +72,13 @@ async function bootstrap() {
 
   // 4. Global Context, Pipes, Interceptors, and Filters
   const contextService = app.get(OmniContextService);
+  app.use((req: any, res: any, next: any) => {
+    const traceId = (req.headers['x-trace-id'] as string) || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString());
+    res.setHeader('x-trace-id', traceId);
+    contextService.run({ traceId }, () => {
+      next();
+    });
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

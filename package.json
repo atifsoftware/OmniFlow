@@ -30,15 +30,15 @@
     "test": "npm --prefix apps/backend run test"
   },
   "overrides": {
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "express": "4.19.2"
   },
   "devDependencies": {
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
-    "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "keywords": [
     "omniflow",

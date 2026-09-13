@@ -43,8 +43,4 @@ import { UsersModule } from './modules/users/users.module';
     },
   ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(OmniContextMiddleware).forRoutes('*');
-  }
-}
+export class AppModule {}

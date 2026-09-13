@@ -27,11 +27,6 @@ import { OmniLoggerService } from "./logger/omni-logger.service";
     OmniTokenModule,
     OmniImageModule,
     OmniAiModule,
-    DocNumberService,
-    AuditService,
-    BackupService,
-    ExportService,
-    PdfService,
   ],
   controllers: [StorageController],
   providers: [
@@ -63,6 +58,11 @@ import { OmniLoggerService } from "./logger/omni-logger.service";
     OmniTokenModule,
     OmniImageModule,
     OmniAiModule,
+    DocNumberService,
+    AuditService,
+    BackupService,
+    ExportService,
+    PdfService,
   ],
 })
 export class OmniCoreModule {}
